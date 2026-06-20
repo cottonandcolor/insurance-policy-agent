@@ -11,10 +11,10 @@
 
 **Title:** Insurance Policy Comparison & Recommendation Agent  
 **Subtitle:** A grounded multi-agent system for insurance decision support  
-**Your name, program, date**
+**Preeti Dave — Capstone — Agent Development — June 2026**
 
 **Say:**  
-"Hi, I'm [Name]. My capstone project is an autonomous agent that helps consumers and brokers compare insurance plans — not just by price, but by what each plan actually pays when you file a claim."
+"Hi, I'm Preeti Dave. My capstone project is an autonomous agent that helps consumers and brokers compare insurance plans — not just by price, but by what each plan actually pays when you file a claim."
 
 ---
 
