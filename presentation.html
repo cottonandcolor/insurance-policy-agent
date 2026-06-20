@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capstone Presentation — Insurance Policy Agent</title>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Google Sans", Arial, sans-serif; background: #202124; color: #202124; overflow: hidden; }
+    .deck { width: 100vw; height: 100vh; position: relative; }
+    .slide {
+      display: none; width: 100%; height: 100%; padding: 48px 64px;
+      background: #fff; flex-direction: column; justify-content: center;
+    }
+    .slide.active { display: flex; }
+    .slide.title-slide { background: linear-gradient(135deg, #1a73e8 0%, #174ea6 100%); color: #fff; text-align: center; align-items: center; }
+    .slide.title-slide h1 { font-size: 36pt; font-weight: 500; margin-bottom: 16px; max-width: 900px; }
+    .slide.title-slide p { font-size: 18pt; opacity: 0.9; margin-bottom: 8px; }
+    .slide.title-slide .meta { font-size: 14pt; margin-top: 32px; opacity: 0.8; }
+    h2 { font-size: 28pt; font-weight: 500; margin-bottom: 24px; color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 8px; }
+    ul { list-style: none; padding: 0; }
+    ul li { font-size: 18pt; margin-bottom: 14px; padding-left: 28px; position: relative; line-height: 1.4; }
+    ul li::before { content: "•"; color: #1a73e8; font-weight: bold; position: absolute; left: 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 14pt; margin-top: 12px; }
+    th, td { border: 1px solid #dadce0; padding: 10px 14px; text-align: left; }
+    th { background: #e8f0fe; color: #174ea6; }
+    pre { background: #f8f9fa; border: 1px solid #dadce0; padding: 16px 20px; font-size: 13pt; font-family: "Courier New", monospace; margin: 16px 0; border-radius: 4px; line-height: 1.5; }
+    .speaker { background: #fef7e0; border-left: 4px solid #f9ab00; padding: 14px 18px; margin-top: 20px; font-size: 13pt; color: #3c4043; line-height: 1.5; }
+    .speaker strong { color: #e37400; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+    .badge { display: inline-block; background: #e8f0fe; color: #174ea6; padding: 4px 12px; border-radius: 4px; font-size: 12pt; margin-right: 8px; margin-bottom: 8px; }
+    .github { font-size: 16pt; color: #1a73e8; word-break: break-all; margin-top: 12px; }
+    .nav { position: fixed; bottom: 20px; right: 24px; display: flex; gap: 8px; z-index: 100; }
+    .nav button { background: #1a73e8; color: #fff; border: none; padding: 10px 20px; font-size: 14pt; border-radius: 4px; cursor: pointer; }
+    .nav button:hover { background: #174ea6; }
+    .counter { position: fixed; bottom: 24px; left: 24px; color: #5f6368; font-size: 12pt; background: #fff; padding: 6px 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    .check { color: #137333; font-weight: 500; }
+    .warn { color: #b06000; }
+  </style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- SLIDE 1 -->
+  <div class="slide title-slide active" data-n="1">
+    <h1>Insurance Policy Comparison &amp; Recommendation Agent</h1>
+    <p>A grounded multi-agent system for insurance decision support</p>
+    <p class="meta">Preeti Dave &nbsp;|&nbsp; preetidav@gmail.com &nbsp;|&nbsp; June 2026</p>
+    <p class="meta" style="margin-top:48px;font-size:12pt;">Press → or Space to advance &nbsp;|&nbsp; ← to go back</p>
+  </div>
+
+  <!-- SLIDE 2 -->
+  <div class="slide" data-n="2">
+    <h2>Problem &amp; Intended User</h2>
+    <ul>
+      <li>30–80 page policy documents written in dense legal language</li>
+      <li>Comparison sites rank by <strong>premium</strong>, not coverage at claim time</li>
+      <li>Example: flood zone — Plan A excludes flood; Plan B covers with $100K sublimit</li>
+      <li><strong>Users:</strong> consumers comparing household coverage; brokers evaluating client options</li>
+    </ul>
+    <div class="speaker"><strong>Say (~1 min):</strong> "Choosing the wrong plan can leave a household exposed to tens of thousands in out-of-pocket loss. My agent targets users who need scenario-based comparison grounded in actual policy language."</div>
+  </div>
+
+  <!-- SLIDE 3 -->
+  <div class="slide" data-n="3">
+    <h2>System Goal &amp; Scope</h2>
+    <ul>
+      <li><strong>Input:</strong> user profile + insurance plan documents</li>
+      <li><strong>Output:</strong> cited comparison table + ranked recommendation</li>
+      <li><strong>Scope:</strong> advisory decision support — no binding quotes or purchases</li>
+      <li><strong>Data:</strong> synthetic/public/anonymized policies only</li>
+    </ul>
+    <div class="speaker"><strong>Say (~45 sec):</strong> "The agent autonomously collects requirements, analyzes plans across loss scenarios, and recommends the best fit with citations — not a replacement for licensed advice."</div>
+  </div>
+
+  <!-- SLIDE 4 -->
+  <div class="slide" data-n="4">
+    <h2>Architecture Overview</h2>
+    <pre>Phase 1   Profile Intake Agent          (CrewAI)
+Phase 2   Chroma Index + Chunking
+Phase 3   Document &amp; Retrieval Agent    (CrewAI)
+Phase 4–5 ToT Beam Loop: Reasoning → Ground → Critic → Prune
+Phase 6   Recommendation Synthesizer    (CrewAI)
+          ─────────────────────────────────────────
+          LangGraph Orchestrator + Shared State</pre>
+    <div>
+      <span class="badge">LangGraph</span>
+      <span class="badge">CrewAI (6 agents)</span>
+      <span class="badge">Chroma RAG</span>
+      <span class="badge">ToT beam search</span>
+    </div>
+    <div class="speaker"><strong>Say (~1.5 min):</strong> "LangGraph orchestrates the workflow. CrewAI agents handle specialized roles. Chroma provides grounded retrieval. The ToT loop explores multiple interpretations — like whether flood is covered — before recommending."</div>
+  </div>
+
+  <!-- SLIDE 5 -->
+  <div class="slide" data-n="5">
+    <h2>Key Design Decisions</h2>
+    <table>
+      <thead><tr><th>Decision</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Retrieval required</td><td>Prevent hallucinated coverage claims</td></tr>
+        <tr><td>Multi-agent (6 roles)</td><td>Separate reasoning from criticism</td></tr>
+        <tr><td>ToT + beam search (width 3)</td><td>Handle interpretive ambiguity</td></tr>
+        <tr><td>Fail-closed safety</td><td>Escalate to human when evidence is missing</td></tr>
+      </tbody>
+    </table>
+    <div class="speaker"><strong>Say (~1.5 min):</strong> "Every claim must cite a policy chunk. A separate Critic agent prevents self-confirmation bias. The system fails closed — it escalates rather than guessing."</div>
+  </div>
+
+  <!-- SLIDE 6 -->
+  <div class="slide" data-n="6">
+    <h2>Design Evolution</h2>
+    <table>
+      <thead><tr><th>Checkpoint</th><th>Refinement</th></tr></thead>
+      <tbody>
+        <tr><td>Initial concept</td><td>Problem framing, workflow phases</td></tr>
+        <tr><td>Retrieval</td><td>Mandated RAG + citation enforcement</td></tr>
+        <tr><td>Tree-of-Thought</td><td>Beam search + critic pruning</td></tr>
+        <tr><td>Multi-agent</td><td>Six roles, hybrid coordination</td></tr>
+        <tr><td>Safety</td><td>Guardrails + human escalation</td></tr>
+        <tr><td>Implementation</td><td>LangGraph + CrewAI + Chroma + tests</td></tr>
+      </tbody>
+    </table>
+    <div class="speaker"><strong>Say (~1 min):</strong> "Each checkpoint added a testable layer — from concept to retrieval to reasoning to agents to safety to working code."</div>
+  </div>
+
+  <!-- SLIDE 7 -->
+  <div class="slide" data-n="7">
+    <h2>Implementation Demo</h2>
+    <div class="two-col">
+      <div>
+        <ul>
+          <li>Python · LangGraph · CrewAI</li>
+          <li>ChromaDB · OpenAI GPT-4o-mini</li>
+          <li>Pydantic schemas + hard gates</li>
+          <li><code>python main.py --dry-run</code></li>
+        </ul>
+      </div>
+      <div>
+        <pre>$ python main.py --dry-run
+
+Recommended: plan_b
+Scenario: $150K flood loss
+Plan B payout: $95,000
+Citations: plan_b:1, plan_a:2</pre>
+      </div>
+    </div>
+    <p class="github"><strong>GitHub:</strong> https://github.com/cottonandcolor/insurance-policy-agent</p>
+    <div class="speaker"><strong>Say (~1.5 min):</strong> "The repo includes a full LangGraph workflow with dry-run mode. For a flood-zone profile, Plan B is recommended because it covers flood in the base form. Code is on GitHub at the URL shown."</div>
+  </div>
+
+  <!-- SLIDE 8 -->
+  <div class="slide" data-n="8">
+    <h2>Evaluation Results</h2>
+    <table>
+      <thead><tr><th>Metric</th><th>Target</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Unit tests</td><td>100%</td><td class="check">6/6 pass</td></tr>
+        <tr><td>Dry-run E2E</td><td>Completes</td><td class="check">Full pipeline OK</td></tr>
+        <tr><td>Payout accuracy</td><td>≥90%</td><td class="check">Plan B: $95K verified</td></tr>
+        <tr><td>Grounding rate</td><td>≥95%</td><td class="check">Hard gates enforce citations</td></tr>
+        <tr><td>Real carrier forms</td><td>Benchmark</td><td class="warn">Not yet — synthetic only</td></tr>
+      </tbody>
+    </table>
+    <div class="speaker"><strong>Say (~1 min):</strong> "Six unit tests pass. Dry-run demonstrates the full agent loop. Main limitation: evaluation uses synthetic policies only."</div>
+  </div>
+
+  <!-- SLIDE 9 -->
+  <div class="slide" data-n="9">
+    <h2>Safety &amp; Human Oversight</h2>
+    <ul>
+      <li><strong>Guardrails:</strong> citations required · no purchase APIs · LLM budget · separate Critic</li>
+      <li><strong>Escalate when:</strong> evidence gap · low confidence · all branches pruned · &gt;$25K payout divergence</li>
+      <li><strong>Metrics:</strong> ≥95% grounding · ≥90% payout accuracy · 100% fallback on hard-gate failure</li>
+    </ul>
+    <pre>Input → Retrieval → ToT + Critic → Hard gates → Output OR Human handoff</pre>
+    <div class="speaker"><strong>Say (~45 sec):</strong> "Safety is built in at every layer. The agent is decision support with mandatory human review at defined thresholds."</div>
+  </div>
+
+  <!-- SLIDE 10 -->
+  <div class="slide title-slide" data-n="10">
+    <h1>Thank You</h1>
+    <p>Insurance Policy Comparison &amp; Recommendation Agent</p>
+    <p class="github" style="color:#fff;margin-top:24px;">https://github.com/cottonandcolor/insurance-policy-agent</p>
+    <p class="meta" style="margin-top:32px;">Questions?</p>
+    <div class="speaker" style="background:rgba(255,255,255,0.15);border-color:#fff;color:#fff;margin-top:32px;text-align:left;max-width:700px;">
+      <strong>Say (~30 sec):</strong> "This capstone integrates retrieval, multi-agent collaboration, Tree-of-Thought reasoning, and safety guardrails. Full code and docs are on GitHub. Thank you."
+    </div>
+  </div>
+
+</div>
+
+<div class="counter"><span id="cur">1</span> / <span id="tot">10</span></div>
+<div class="nav">
+  <button onclick="prev()">← Back</button>
+  <button onclick="next()">Next →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let i = 0;
+  document.getElementById('tot').textContent = slides.length;
+  function show(n) {
+    slides[i].classList.remove('active');
+    i = (n + slides.length) % slides.length;
+    slides[i].classList.add('active');
+    document.getElementById('cur').textContent = i + 1;
+  }
+  function next() { show(i + 1); }
+  function prev() { show(i - 1); }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft') { prev(); }
+  });
+</script>
+</body>
+</html>

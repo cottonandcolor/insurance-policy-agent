@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Final Capstone Report — Section B</title>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px 16px 64px; background: #f8f9fa; font-family: Arial, "Roboto", sans-serif; font-size: 11pt; line-height: 1.5; color: #202124; }
+    .docs-page { max-width: 816px; margin: 0 auto; background: #fff; box-shadow: 0 1px 3px rgba(60,64,67,.3), 0 4px 8px rgba(60,64,67,.15); border: 1px solid #dadce0; padding: 96px; }
+    h1 { font-family: "Google Sans", Arial, sans-serif; font-size: 20pt; font-weight: 400; margin: 0 0 8pt; padding-bottom: 6pt; border-bottom: 1px solid #e8eaed; }
+    .meta { font-size: 11pt; color: #5f6368; margin: 0 0 20pt; }
+    h2 { font-family: "Google Sans", Arial, sans-serif; font-size: 14pt; font-weight: 400; margin: 18pt 0 6pt; }
+    h3 { font-family: "Google Sans", Arial, sans-serif; font-size: 12pt; font-weight: 500; margin: 12pt 0 4pt; color: #3c4043; }
+    p { margin: 0 0 10pt; }
+    ul, ol { margin: 0 0 10pt; padding-left: 36pt; }
+    li { margin-bottom: 4pt; }
+    table { width: 100%; border-collapse: collapse; margin: 10pt 0 14pt; font-size: 10.5pt; }
+    th, td { border: 1px solid #000; padding: 6pt 8pt; vertical-align: top; text-align: left; }
+    th { background: #f3f3f3; font-weight: 700; }
+    pre { font-family: "Courier New", monospace; font-size: 9pt; background: #f8f9fa; border: 1px solid #dadce0; padding: 10pt 12pt; margin: 10pt 0 14pt; white-space: pre-wrap; }
+    hr { border: none; border-top: 1px solid #dadce0; margin: 20pt 0; }
+    a { color: #1a73e8; }
+    @media print { body { background: #fff; padding: 0; } .docs-page { box-shadow: none; border: none; padding: 72pt; } }
+  </style>
+</head>
+<body>
+<div class="docs-page">
+
+<h1>Final Capstone Project Report — Section B</h1>
+<p class="meta"><strong>Insurance Policy Comparison &amp; Recommendation Agent</strong><br>
+Author: Preeti Dave &nbsp;|&nbsp; Email: preetidav@gmail.com &nbsp;|&nbsp; Date: June 2026<br>
+GitHub: <a href="https://github.com/cottonandcolor/insurance-policy-agent">https://github.com/cottonandcolor/insurance-policy-agent</a></p>
+
+<h2>1. Problem Statement and Intended User</h2>
+<h3>Real-world problem</h3>
+<p>Choosing insurance is one of the most consequential financial decisions a household makes, yet it remains opaque. Consumers face dozens of plans with different limits, deductibles, exclusions, and riders buried in 30–80 page legal documents. Comparison sites rank by premium, not by what happens at claim time. A flood-zone consumer may choose a cheaper plan that excludes flood entirely — exposing the household to catastrophic loss.</p>
+<h3>Intended user</h3>
+<ul>
+  <li><strong>Primary:</strong> Individual consumers comparing plans for their household</li>
+  <li><strong>Secondary:</strong> Insurance brokers evaluating options for a client</li>
+</ul>
+
+<h2>2. System Goal, Scope, and Constraints</h2>
+<h3>Goal</h3>
+<p>Autonomously collect user requirements, ingest and normalize policies, retrieve grounded evidence, explore interpretive reasoning paths (Tree-of-Thought), score and prune weak hypotheses, and recommend the best-fit plan with cited tradeoffs.</p>
+<h3>Scope</h3>
+<p><strong>In scope:</strong> Auto/home/life comparison, loss-scenario analysis, cited comparison tables, follow-up re-scoring, synthetic/public data only.</p>
+<p><strong>Out of scope:</strong> Binding quotes, policy purchase, claims filing, proprietary client data, medical underwriting.</p>
+<h3>Constraints</h3>
+<ul>
+  <li>Synthetic/public/anonymized policy data only</li>
+  <li>LLM budget: ≤25 calls, ≤45s per cycle</li>
+  <li>Beam search: width 3, depth 4</li>
+  <li>Advisory only — human review under defined escalation criteria</li>
+</ul>
+
+<h2>3. Final System Architecture</h2>
+<p>The system integrates <strong>RAG</strong>, <strong>ToT beam search</strong>, <strong>multi-agent role separation</strong>, and <strong>safety guardrails</strong> — orchestrated by LangGraph with CrewAI agents.</p>
+<pre>Phase 1   Profile Intake Agent (CrewAI)
+Phase 2   Chroma Index + Section-Aware Chunking
+Phase 3   Document &amp; Retrieval Agent → Normalized Schema
+Phase 4–5 ToT Loop: Reasoning → Ground → Hard Gates → Critic → Prune/Expand
+Phase 6   Recommendation Synthesizer Agent
+Shared State: session_profile, branch_store, retrieval_cache</pre>
+<p>LangGraph routes phases and runs the ToT beam loop. CrewAI agents handle specialized reasoning. Chroma provides grounded retrieval. Hard gates block uncited claims before the Policy Critic scores surviving branches. The Synthesizer produces the final cited recommendation from the winning branch only.</p>
+
+<h2>4. Design Rationale</h2>
+<table>
+  <thead><tr><th>Decision</th><th>Rationale</th></tr></thead>
+  <tbody>
+    <tr><td>Retrieval required</td><td>Policy docs exceed context windows; LLMs hallucinate coverage</td></tr>
+    <tr><td>Multi-agent (6 roles)</td><td>Separates reasoning from criticism; prevents self-confirmation bias</td></tr>
+    <tr><td>ToT + beam search</td><td>Handles interpretive ambiguity without combinatorial explosion</td></tr>
+    <tr><td>LangGraph orchestrator</td><td>Explicit state machine for phase routing and budget enforcement</td></tr>
+    <tr><td>Fail-closed safety</td><td>Escalate or clarify under uncertainty — never guess</td></tr>
+  </tbody>
+</table>
+
+<h2>5. Design Evolution Across the Program</h2>
+<table>
+  <thead><tr><th>Checkpoint</th><th>Key refinement</th></tr></thead>
+  <tbody>
+    <tr><td>Initial concept</td><td>Problem, user, workflow, why single-prompt LLM fails</td></tr>
+    <tr><td>Retrieval</td><td>Mandated RAG, section chunking, citation enforcement</td></tr>
+    <tr><td>Tree-of-Thought</td><td>Beam search, critic evaluation, pruning rubric</td></tr>
+    <tr><td>Multi-agent</td><td>Six agents, hybrid sequential + graph coordination</td></tr>
+    <tr><td>Safety</td><td>Guardrails, metrics, human escalation criteria</td></tr>
+    <tr><td>Implementation</td><td>LangGraph + CrewAI + Chroma + unit tests + dry-run mode</td></tr>
+  </tbody>
+</table>
+
+<h2>6. Implementation Summary</h2>
+<table>
+  <thead><tr><th>Component</th><th>Technology</th></tr></thead>
+  <tbody>
+    <tr><td>Orchestration</td><td>LangGraph (StateGraph, conditional edges)</td></tr>
+    <tr><td>Agents</td><td>CrewAI (5 specialist agents)</td></tr>
+    <tr><td>LLM</td><td>OpenAI GPT-4o-mini</td></tr>
+    <tr><td>Retrieval</td><td>ChromaDB + section-aware chunking</td></tr>
+    <tr><td>Validation</td><td>Pydantic schemas, payout calculator, hard gates</td></tr>
+    <tr><td>Testing</td><td>pytest (6 tests); dry-run E2E without API key</td></tr>
+  </tbody>
+</table>
+<p><strong>Run:</strong> <code>python main.py --dry-run</code> (no API) &nbsp;|&nbsp; <code>python main.py</code> (live) &nbsp;|&nbsp; <code>python -m pytest tests/ -q</code></p>
+
+<h2>7. Evaluation</h2>
+<table>
+  <thead><tr><th>Metric</th><th>Target</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>Unit tests</td><td>100% pass</td><td>6/6 pass (chunking, payout, gates, routing)</td></tr>
+    <tr><td>Dry-run E2E</td><td>Full pipeline completes</td><td>Recommends plan_b for flood-zone profile with citations</td></tr>
+    <tr><td>Payout accuracy</td><td>≥90%</td><td>Plan B flood: $95K on $150K loss (verified)</td></tr>
+    <tr><td>Grounding rate</td><td>≥95%</td><td>Hard gates enforce citations before critic scoring</td></tr>
+    <tr><td>False-coverage rate</td><td>≤2%</td><td>Pending full eval corpus benchmark</td></tr>
+  </tbody>
+</table>
+<h3>Strengths</h3>
+<ul>
+  <li>Citation-required grounding before recommendation</li>
+  <li>Separate Critic agent; ToT explores multiple clause interpretations</li>
+  <li>Fail-closed when branches pruned; dry-run demo without API costs</li>
+</ul>
+<h3>Limitations</h3>
+<ul>
+  <li>Synthetic policies only — metrics may not transfer to real carrier forms</li>
+  <li>MCP shared state designed but not fully deployed</li>
+  <li>No production user study or broker validation yet</li>
+</ul>
+
+<h2>8. Safety, Reliability, and Human Oversight</h2>
+<p><strong>Guardrails:</strong> Synthetic data only; citation-required grounding; arithmetic validator; no purchase APIs; LLM budget; separate Critic; output disclaimer; block output if all branches fail.</p>
+<p><strong>Human intervention when:</strong> Evidence gap after expanded retrieval; low confidence with tied scores; all branches pruned; payout divergence &gt;$25K; user corrects misread term; out-of-scope request (binding quote, purchase, claims).</p>
+<pre>Input validation → Grounded retrieval → ToT + Critic → Hard gates → Metrics check → Output OR escalate</pre>
+
+<h2>9. Conclusion</h2>
+<p>This capstone delivers an autonomous insurance comparison agent that integrates retrieval, multi-agent collaboration, Tree-of-Thought reasoning, and safety guardrails into a cohesive LangGraph + CrewAI implementation — addressing a real consumer and broker need with testable, auditable controls.</p>
+
+<hr>
+<h2>10. References</h2>
+<ul>
+  <li><strong>GitHub Repository:</strong> <a href="https://github.com/cottonandcolor/insurance-policy-agent">https://github.com/cottonandcolor/insurance-policy-agent</a></li>
+  <li><strong>Presentation Video:</strong> Submitted separately in Canvas (8–10 minutes)</li>
+  <li><strong>Design checkpoints:</strong> See <code>docs/</code> folder in repository</li>
+</ul>
+
+</div>
+</body>
+</html>

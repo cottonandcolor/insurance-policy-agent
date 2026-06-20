@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Agent Architecture — Capstone Submission</title>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 16px 64px;
+      background: #f8f9fa;
+      font-family: Arial, "Roboto", sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #202124;
+    }
+    .docs-page {
+      max-width: 816px;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(60,64,67,.3), 0 4px 8px rgba(60,64,67,.15);
+      border: 1px solid #dadce0;
+      padding: 96px;
+    }
+    h1 {
+      font-family: "Google Sans", Arial, sans-serif;
+      font-size: 20pt;
+      font-weight: 400;
+      margin: 0 0 6pt;
+      line-height: 1.25;
+    }
+    .subtitle {
+      font-size: 12pt;
+      color: #5f6368;
+      margin: 0 0 18pt;
+      font-style: italic;
+    }
+    h2 {
+      font-family: "Google Sans", Arial, sans-serif;
+      font-size: 14pt;
+      font-weight: 400;
+      margin: 16pt 0 6pt;
+    }
+    p { margin: 0 0 10pt; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10pt 0 14pt;
+      font-size: 10.5pt;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 6pt 8pt;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: #f3f3f3; font-weight: 700; }
+    .word-count {
+      margin-top: 18pt;
+      font-style: italic;
+      color: #5f6368;
+      font-size: 10pt;
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .docs-page { box-shadow: none; border: none; padding: 72pt; }
+    }
+  </style>
+</head>
+<body>
+<div class="docs-page">
+
+  <h1>Capstone Design Update: Multi-Agent Architecture</h1>
+  <p class="subtitle">Insurance Policy Comparison &amp; Recommendation Agent</p>
+
+  <h2>Problem and Why Multi-Agent</h2>
+  <p>My capstone agent helps consumers and brokers compare auto, home, and life insurance plans by analyzing coverage limits, exclusions, deductibles, and realistic out-of-pocket costs across loss scenarios — grounded in actual policy language, not premium rankings alone.</p>
+  <p>A single agent cannot reliably perform this work. Policy comparison spans distinct competencies: structured user interviewing, long-document extraction, semantic retrieval across legal text, multi-path interpretive reasoning, arithmetic scenario modeling, and adversarial quality review. Combining these in one agent increases hallucination risk, blurs accountability for errors, and makes it impossible to enforce grounding gates before recommendations are issued. A multi-agent design separates concerns so each agent has a narrow, testable mandate — similar to how a research workflow benefits from distinct planner, researcher, and writer roles.</p>
+
+  <h2>Agent Count and Rationale</h2>
+  <p>The system includes <strong>six agents</strong>, determined by task decomposition rather than arbitrary expansion:</p>
+  <table>
+    <thead>
+      <tr><th>Agent</th><th>Core responsibility</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Orchestrator</strong></td><td>Workflow routing, phase transitions, beam-search budget enforcement</td></tr>
+      <tr><td><strong>Profile Intake Agent</strong></td><td>Collects user profile, assets, location risks, and priority weights</td></tr>
+      <tr><td><strong>Document &amp; Retrieval Agent</strong></td><td>Ingests policy PDFs, normalizes schema, retrieves grounded evidence</td></tr>
+      <tr><td><strong>Scenario Reasoning Agent</strong></td><td>Generates ToT branches, interprets clauses, computes loss scenarios</td></tr>
+      <tr><td><strong>Policy Critic Agent</strong></td><td>Scores branches, enforces citation/arithmetic gates, prunes weak paths</td></tr>
+      <tr><td><strong>Recommendation Synthesizer</strong></td><td>Produces comparison table, ranked recommendation, and citations</td></tr>
+    </tbody>
+  </table>
+  <p>Six agents map to six workflow phases with minimal overlap. Fewer agents would merge extraction with evaluation (self-confirmation bias). More agents — e.g., separate chunking, embedding, and reranking agents — would add coordination overhead without proportional accuracy gains at this design stage.</p>
+
+  <h2>Coordination Strategy</h2>
+  <p>The architecture uses a <strong>hybrid coordination model</strong>:</p>
+  <p><strong>Sequential (Phases 1–3):</strong> Profile Intake → Document &amp; Retrieval → normalized plan store. This assembly-line flow ensures downstream agents operate on validated, structured inputs.</p>
+  <p><strong>Iterative graph (Phases 4–5):</strong> The Orchestrator runs a beam-search loop: Scenario Reasoning generates branches → Document &amp; Retrieval grounds them → Policy Critic evaluates → Orchestrator prunes or expands. This graph resembles a project network with feedback edges, not a single pass.</p>
+  <p><strong>Sequential (Phase 6):</strong> Recommendation Synthesizer converts the winning branch into user-facing output; Orchestrator handles follow-up re-entry at depth 2 without rebuilding the full tree.</p>
+
+  <h2>Communication Strategy</h2>
+  <p>Communication is <strong>mixed by phase</strong>:</p>
+  <p><strong>One-way (Orchestrator → workers):</strong> Task assignments, depth-layer prompts, and budget limits flow top-down for efficiency.</p>
+  <p><strong>Two-way (Reasoning ↔ Critic):</strong> The Scenario Reasoning Agent submits candidate thoughts; the Policy Critic returns score vectors and prune/keep decisions. This validation loop prevents unchecked interpretive drift.</p>
+  <p><strong>Shared state (all agents via MCP):</strong> <code>session_profile</code>, <code>branch_store</code>, and <code>retrieval_cache</code> enable agents to read consistent context without passing full document history on every turn.</p>
+  <p>LangChain orchestrates control flow; CrewAI defines agent roles and task routing; MCP maintains branch-aware memory across the ToT loop.</p>
+
+  <h2>Trade-offs</h2>
+  <table>
+    <thead>
+      <tr><th>Decision</th><th>Benefit</th><th>Cost</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Separate Critic Agent</td>
+        <td>Reduces self-confirmation bias; improves grounding enforcement</td>
+        <td>+1 agent, added latency per branch</td>
+      </tr>
+      <tr>
+        <td>Hybrid sequential + graph coordination</td>
+        <td>Reliable preprocessing; flexible reasoning where ambiguity peaks</td>
+        <td>Higher implementation complexity vs. pure pipeline</td>
+      </tr>
+      <tr>
+        <td>Two-way Reasoning–Critic loop</td>
+        <td>Catches misread exclusions before recommendation</td>
+        <td>~25 LLM calls and up to 45s per cycle</td>
+      </tr>
+      <tr>
+        <td>MCP shared state</td>
+        <td>Consistent branch tracking; efficient follow-up re-scoring</td>
+        <td>State synchronization risk if schemas drift</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Feedback loops improve reliability at the cost of latency — acceptable for high-stakes financial recommendations where incorrect coverage advice outweighs wait time.</p>
+
+  <h2>Scalability</h2>
+  <p>The architecture scales horizontally by design. The Document &amp; Retrieval Agent parallelizes per-plan ingestion; retrieval cache deduplicates sibling branch queries. The Orchestrator caps beam width (3) and depth (4), preventing combinatorial explosion as plan count grows. MCP session updates trigger partial ToT re-entry at depth 2 for follow-up queries, not full pipeline restarts. New insurance types can be added via the normalized schema without redesigning the Critic or Synthesizer.</p>
+  <p>Each agent is independently testable — extraction accuracy, retrieval precision, pruning recall, and synthesis citation rate — making the system evolvable across later implementation modules without architectural rework.</p>
+
+  <p class="word-count">Word count: ~560</p>
+
+</div>
+</body>
+</html>

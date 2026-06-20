@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safety Guardrails — Capstone Submission</title>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 16px 64px;
+      background: #f8f9fa;
+      font-family: Arial, "Roboto", sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #202124;
+    }
+
+    .docs-page {
+      max-width: 816px;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3), 0 4px 8px rgba(60, 64, 67, 0.15);
+      border: 1px solid #dadce0;
+      padding: 96px 96px 96px;
+      min-height: 1056px;
+    }
+
+    h1 {
+      font-family: "Google Sans", Arial, sans-serif;
+      font-size: 20pt;
+      font-weight: 400;
+      line-height: 1.25;
+      color: #202124;
+      margin: 0 0 8pt;
+      padding-bottom: 6pt;
+      border-bottom: 1px solid #e8eaed;
+    }
+
+    .subtitle {
+      font-size: 12pt;
+      color: #5f6368;
+      margin: 0 0 20pt;
+      font-style: italic;
+    }
+
+    h2 {
+      font-family: "Google Sans", Arial, sans-serif;
+      font-size: 14pt;
+      font-weight: 400;
+      color: #202124;
+      margin: 18pt 0 6pt;
+      line-height: 1.3;
+    }
+
+    p {
+      margin: 0 0 10pt;
+      text-align: left;
+    }
+
+    strong { font-weight: 700; }
+
+    ol, ul {
+      margin: 0 0 10pt;
+      padding-left: 36pt;
+    }
+
+    li { margin-bottom: 5pt; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10pt 0 14pt;
+      font-size: 10.5pt;
+    }
+
+    th, td {
+      border: 1px solid #000000;
+      padding: 6pt 8pt;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #f3f3f3;
+      font-weight: 700;
+    }
+
+    .flow {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 10pt;
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 2px;
+      padding: 10pt 14pt;
+      margin: 10pt 0 14pt;
+    }
+
+    .word-count {
+      margin-top: 24pt;
+      padding-top: 12pt;
+      border-top: 1px solid #dadce0;
+      font-style: italic;
+      color: #5f6368;
+      font-size: 10pt;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .docs-page {
+        box-shadow: none;
+        border: none;
+        max-width: none;
+        padding: 72pt;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .docs-page { padding: 48px 32px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="docs-page">
+
+  <h1>Capstone Design Update: Safety Guardrails, Evaluation Metrics, and Human Intervention</h1>
+  <p class="subtitle">Insurance Policy Comparison &amp; Recommendation Agent</p>
+
+  <h2>Agent Purpose and Safety Risks</h2>
+  <p>My capstone agent compares auto, home, and life insurance plans for consumers and brokers. It extracts coverage terms from policy documents, runs loss-scenario analysis, and recommends a best-fit plan with citations. Because recommendations affect financial protection decisions, the primary risks are not generic AI failure but domain-specific harm:</p>
+  <ul>
+    <li><strong>Hallucinated coverage claims</strong> — stating flood is covered when an exclusion applies</li>
+    <li><strong>Incorrect payout arithmetic</strong> — understating out-of-pocket exposure</li>
+    <li><strong>Overconfident ranking</strong> — recommending the cheapest plan while ignoring critical exclusions</li>
+    <li><strong>Stale or mismatched policy data</strong> — wrong jurisdiction or outdated form</li>
+    <li><strong>Proceeding without sufficient evidence</strong> — when endorsement schedules or rider attachments are missing</li>
+  </ul>
+
+  <h2>Guardrails</h2>
+  <p>Guardrails operate at input, runtime, and output layers:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Layer</th>
+        <th>Guardrail</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Input</strong></td>
+        <td>Synthetic/public/anonymized corpus only; reject uploads without plan metadata (jurisdiction, effective date)</td>
+        <td>Prevents privacy leakage and jurisdiction mismatches</td>
+      </tr>
+      <tr>
+        <td><strong>Input</strong></td>
+        <td>Structured profile schema with required fields (location, risk factors, priority weights)</td>
+        <td>Blocks incomplete scenario modeling</td>
+      </tr>
+      <tr>
+        <td><strong>Runtime</strong></td>
+        <td>Hard grounding gate — no coverage claim without retrieved chunk citation</td>
+        <td>Prevents hallucinated policy language</td>
+      </tr>
+      <tr>
+        <td><strong>Runtime</strong></td>
+        <td>Arithmetic validator — payout tool must match agent calculation within tolerance</td>
+        <td>Catches deductible and limit errors</td>
+      </tr>
+      <tr>
+        <td><strong>Runtime</strong></td>
+        <td>Tool access limits — retrieval-only during reasoning; no premium binding or purchase APIs</td>
+        <td>Agent advises; it does not transact</td>
+      </tr>
+      <tr>
+        <td><strong>Runtime</strong></td>
+        <td>LLM call and latency budget (≤25 calls, ≤45s per cycle)</td>
+        <td>Prevents runaway ToT branch explosion</td>
+      </tr>
+      <tr>
+        <td><strong>Runtime</strong></td>
+        <td>Policy Critic agent separated from Reasoning agent</td>
+        <td>Reduces self-confirmation bias</td>
+      </tr>
+      <tr>
+        <td><strong>Output</strong></td>
+        <td>Recommendation template requires comparison table, cited tradeoffs, confidence tag, and "not a binding quote" disclaimer</td>
+        <td>Constrains format and sets user expectations</td>
+      </tr>
+      <tr>
+        <td><strong>Output</strong></td>
+        <td>Block final output if all ToT branches fail hard gates</td>
+        <td>Fail closed, not guess</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Evaluation Metrics</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>Target</th>
+        <th>Measures</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Grounding rate</strong></td>
+        <td>≥95% of coverage claims cite retrieved chunks</td>
+        <td>Factual reliability</td>
+      </tr>
+      <tr>
+        <td><strong>Scenario payout accuracy</strong></td>
+        <td>≥90% vs. synthetic ground-truth labels</td>
+        <td>Correctness</td>
+      </tr>
+      <tr>
+        <td><strong>False-coverage rate</strong></td>
+        <td>≤2% (claims covered when policy excludes)</td>
+        <td>Safety</td>
+      </tr>
+      <tr>
+        <td><strong>Escalation rate</strong></td>
+        <td>Track % of sessions routed to human</td>
+        <td>Appropriate deference</td>
+      </tr>
+      <tr>
+        <td><strong>Calibration</strong></td>
+        <td>High-confidence recommendations correct ≥85% on eval set</td>
+        <td>Trustworthiness of confidence tags</td>
+      </tr>
+      <tr>
+        <td><strong>Pruning precision</strong></td>
+        <td>Protected branches with cross-section citations survive ≥80%</td>
+        <td>ToT safety gate quality</td>
+      </tr>
+      <tr>
+        <td><strong>Latency P95</strong></td>
+        <td>≤45 seconds per recommendation cycle</td>
+        <td>Efficiency</td>
+      </tr>
+      <tr>
+        <td><strong>Fallback success</strong></td>
+        <td>100% of hard-gate failures produce clarifying question, not silent guess</td>
+        <td>Fail-safe behavior</td>
+      </tr>
+      <tr>
+        <td><strong>User correction rate</strong></td>
+        <td>Track post-hoc corrections to misread terms</td>
+        <td>Extraction quality over time</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Metrics are evaluated on a held-out set of synthetic policies with labeled flood, liability, and theft scenarios before any live-facing demo.</p>
+
+  <h2>Human Intervention Criteria</h2>
+  <p>The system <strong>must defer to a human</strong> (licensed broker or clearly labeled human review step) when any of the following is true:</p>
+  <ol>
+    <li><strong>Evidence gap:</strong> Required endorsement or exclusion section not found in corpus after expanded retrieval</li>
+    <li><strong>Low confidence:</strong> Top two plans within 0.05 composite score and grounding score &lt;0.80 on either branch</li>
+    <li><strong>Hard-gate failure cluster:</strong> All ToT branches pruned at depth ≤2</li>
+    <li><strong>High-impact ambiguity:</strong> Peril interpretation differs by &gt;$25K payout across surviving branches (e.g., flood covered vs. excluded)</li>
+    <li><strong>User correction:</strong> User flags a misread term — agent pauses autonomous re-ranking until human confirms corrected interpretation</li>
+    <li><strong>Out-of-scope request:</strong> Binding quote, policy purchase, claims filing, or medical/health underwriting questions</li>
+    <li><strong>Regulatory sensitivity:</strong> Life insurance suitability or employer-benefit coordination beyond document scope</li>
+  </ol>
+  <p>When triggered, the agent outputs a <strong>partial analysis</strong> (what is known, what is missing, cited evidence) and a structured handoff prompt — not a final recommendation.</p>
+
+  <h2>Integrated Safety Strategy</h2>
+  <p>Guardrails, evaluation, and human intervention form a <strong>layered control loop</strong>:</p>
+  <p class="flow">Input validation → Grounded retrieval → ToT + Critic → Hard gates → Metrics check → Output OR escalate</p>
+  <p>Runtime guardrails prevent unsafe outputs from being generated. Metrics monitor whether guardrails hold under test loads. Human intervention criteria define the boundary where autonomous completion is unsafe despite guardrails — typically when evidence is incomplete or stakes are high. Together, they implement a <strong>fail-closed</strong> design: the default action under uncertainty is clarification or escalation, not recommendation.</p>
+
+  <h2>Trade-offs</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Decision</th>
+        <th>Benefit</th>
+        <th>Cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Fail-closed on missing evidence</td>
+        <td>Avoids catastrophic coverage advice</td>
+        <td>Higher escalation rate; more user friction</td>
+      </tr>
+      <tr>
+        <td>Separate Critic + hard gates</td>
+        <td>Stronger reliability</td>
+        <td>Added latency (~25 LLM calls)</td>
+      </tr>
+      <tr>
+        <td>Confidence-based escalation</td>
+        <td>Human attention where it matters</td>
+        <td>Requires calibrated scoring on eval set</td>
+      </tr>
+      <tr>
+        <td>No purchase/bind tools</td>
+        <td>Clear advisory boundary</td>
+        <td>Agent cannot complete end-to-end buying flow</td>
+      </tr>
+      <tr>
+        <td>Synthetic corpus only (capstone)</td>
+        <td>Safe development</td>
+        <td>Metrics may not transfer until validated on public forms</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Increasing oversight improves reliability but reduces autonomy and speed — acceptable for high-stakes insurance decisions where a wrong recommendation exceeds the cost of human review.</p>
+
+  <h2>Real-World Deployment Support</h2>
+  <p>This plan supports dependable deployment by making safety <strong>testable and auditable</strong>: every recommendation traceable to retrieved citations, every escalation tied to explicit criteria, every metric measurable on synthetic ground truth before production. In a real-world context, the agent functions as a <strong>decision-support layer</strong> — not a replacement for licensed advice — with bounded tool access, documented failure modes, and mandatory human review when ambiguity or financial impact exceeds defined thresholds.</p>
+
+  <p class="word-count">Word count: ~580</p>
+
+</div>
+
+</body>
+</html>

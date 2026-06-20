@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insurance Policy Comparison Agent — Capstone Proposal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* Google Docs–inspired document shell */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px 16px 64px;
+      background: #f8f9fa;
+      font-family: Arial, "Roboto", sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #202124;
+    }
+
+    .docs-page {
+      max-width: 816px;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3), 0 4px 8px rgba(60, 64, 67, 0.15);
+      border: 1px solid #dadce0;
+      padding: 96px 96px 96px;
+      min-height: 1056px;
+    }
+
+    /* Typography — mirrors Google Docs defaults */
+    h1 {
+      font-family: "Google Sans", Arial, sans-serif;
+      font-size: 20pt;
+      font-weight: 400;
+      line-height: 1.25;
+      color: #202124;
+      margin: 0 0 12pt;
+      padding-bottom: 6pt;
+      border-bottom: 1px solid #e8eaed;
+    }
+
+    h2 {
+      font-family: "Google Sans", Arial, sans-serif;
+      font-size: 14pt;
+      font-weight: 400;
+      color: #202124;
+      margin: 18pt 0 6pt;
+      line-height: 1.3;
+    }
+
+    h3 {
+      font-family: "Google Sans", Arial, sans-serif;
+      font-size: 12pt;
+      font-weight: 500;
+      color: #3c4043;
+      margin: 14pt 0 4pt;
+      line-height: 1.3;
+    }
+
+    p {
+      margin: 0 0 10pt;
+      text-align: left;
+    }
+
+    .subtitle,
+    .date {
+      font-style: italic;
+      color: #5f6368;
+      margin-bottom: 12pt;
+    }
+
+    ul, ol {
+      margin: 0 0 10pt;
+      padding-left: 36pt;
+    }
+
+    li {
+      margin-bottom: 4pt;
+    }
+
+    strong {
+      font-weight: 700;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    hr.section-break {
+      border: none;
+      border-top: 1px solid #dadce0;
+      margin: 24pt 0;
+    }
+
+    /* Tables — Google Docs grid style */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10pt 0 14pt;
+      font-size: 10.5pt;
+    }
+
+    th, td {
+      border: 1px solid #000;
+      padding: 6pt 8pt;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #f3f3f3;
+      font-weight: 700;
+    }
+
+    /* Code / diagram blocks */
+    pre {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 9pt;
+      line-height: 1.4;
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 2px;
+      padding: 10pt 12pt;
+      margin: 10pt 0 14pt;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    code {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 10pt;
+      background: #f1f3f4;
+      padding: 1pt 4pt;
+      border-radius: 2px;
+    }
+
+    .highlight-box {
+      background: #e8f0fe;
+      border-left: 4px solid #1a73e8;
+      padding: 10pt 14pt;
+      margin: 10pt 0 14pt;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .docs-page {
+        box-shadow: none;
+        border: none;
+        max-width: none;
+        padding: 72pt;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .docs-page {
+        padding: 48px 32px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="docs-page">
+
+  <!-- ============================================================ -->
+  <h1>Option A: Research Assistant — Insurance Policy Comparison &amp; Recommendation Agent</h1>
+
+  <h2>Problem</h2>
+  <p>A consumer shopping for insurance (auto, home, life) faces dozens of plans across multiple carriers. Each plan has different coverage limits, deductibles, exclusions, riders, and premium structures. Comparison sites show price but not the critical fine print — "Does this plan cover flood damage? What's the actual out-of-pocket if I total my car?"</p>
+
+  <h2>Intended User</h2>
+  <p>Individual consumer or insurance broker comparing plans for a client.</p>
+
+  <h2>Agent Goal</h2>
+  <p>Given a user's profile (age, location, assets, risk tolerance) and a set of insurance plans, analyze coverage gaps, compare total cost of ownership (not just premium), identify hidden exclusions, and recommend the best-fit plan with justification.</p>
+
+  <h2>Why a Single Prompt Fails</h2>
+  <ul>
+    <li>Plan documents are 30–80 page PDFs with dense legal language — won't fit in one context window</li>
+    <li>Must compare across plans (Plan A covers X but not Y, Plan B covers Y but has a $5K deductible) — requires structured extraction then cross-comparison</li>
+    <li>Needs to calculate scenarios: "If your house floods, Plan A pays $150K after $2K deductible, Plan B pays $100K after $5K deductible, Plan C excludes flood entirely"</li>
+    <li>Must factor in the user's specific situation (location in a flood zone, existing coverage from employer, credit score affecting premiums)</li>
+    <li>Requires iterative refinement — user says "I don't care about roadside assistance, but I need rental car coverage" and the recommendation changes</li>
+    <li>A single prompt hallucinates coverage details — the agent must ground every claim in the actual document</li>
+  </ul>
+
+  <h2>Environment</h2>
+  <ul>
+    <li>Insurance plan PDFs or structured data (from carrier APIs or scraped comparison sites)</li>
+    <li>User profile questionnaire</li>
+    <li>Location-based risk data (flood zones, crime rates, weather patterns)</li>
+    <li>Premium calculator APIs</li>
+    <li>A document store for extracted plan details</li>
+  </ul>
+
+  <h2>Actions</h2>
+  <ol>
+    <li>Collect user profile (age, location, assets, existing coverage, priorities)</li>
+    <li>Ingest plan documents — chunk and extract key terms: coverage limits, deductibles, exclusions, waiting periods, riders</li>
+    <li>Normalize extracted data into a comparable schema</li>
+    <li>Run scenario analysis: for each major risk event (accident, theft, natural disaster, liability claim), calculate what each plan actually pays</li>
+    <li>Score plans against user's priorities (lowest total cost, broadest coverage, best claims reputation)</li>
+    <li>Generate comparison table and recommendation with citations to specific plan sections</li>
+    <li>User asks follow-up ("What if I add my teenage driver?") — agent recalculates</li>
+  </ol>
+
+  <h2>Feedback</h2>
+  <p>User marks which factors matter most, corrects any misread plan terms, asks "what if" scenarios. Agent refines recommendation and learns the user's risk tolerance.</p>
+
+  <hr class="section-break">
+
+  <!-- ============================================================ -->
+  <h1>Agent Concept: Insurance Policy Comparison &amp; Recommendation Agent</h1>
+
+  <h2>Problem &amp; Intended User</h2>
+  <p>Choosing the right insurance policy — whether auto, home, or life — is one of the most consequential financial decisions a household makes, yet it remains one of the most opaque. Consumers face dozens of plans across carriers, each with different coverage limits, deductibles, exclusions, waiting periods, and premium structures buried in 30–80 page policy documents written in dense legal language. Existing comparison websites rank plans primarily by premium price, ignoring the critical question: what actually happens when I file a claim?</p>
+  <p>The intended user is either an individual consumer comparing plans or an insurance broker evaluating options for a client. The agent's goal is to analyze multiple insurance plans against a user's specific profile and risk exposure, compare total cost of ownership across realistic loss scenarios, identify hidden coverage gaps, and produce a justified recommendation grounded in the actual policy language — not generic summaries.</p>
+
+  <h2>Why a Standalone Language Model is Insufficient</h2>
+  <p>A single prompt-response approach fails this problem for several structural reasons. First, policy documents exceed the context window of most language models, and even when they fit, LLMs routinely hallucinate coverage details — confidently stating a plan covers flood damage when the fine print excludes it. The agent must ground every claim in a specific document section.</p>
+  <p>Second, the task requires multi-step reasoning across documents. Comparing Plan A against Plan B is not a single extraction — it requires normalizing terminology (one carrier says "comprehensive," another says "all-perils"), aligning coverage categories, and then running scenario-based calculations: "If your house floods, Plan A pays $150,000 after a $2,000 deductible, Plan B pays $100,000 after a $5,000 deductible, and Plan C excludes flood entirely." This cross-document comparison with arithmetic cannot be reliably handled in a single pass.</p>
+  <p>Third, the problem is inherently interactive. A user's priorities shift during the conversation — "I don't care about roadside assistance, but rental car coverage is essential" — and the recommendation must adapt. This requires maintaining state across turns, re-scoring plans against updated criteria, and explaining what changed and why.</p>
+
+  <h2>Environment</h2>
+  <p>The agent interacts with several external systems and data sources. Insurance plan documents (PDFs or structured data from carrier APIs) are the primary knowledge source, requiring parsing, chunking, and structured extraction. A user profile questionnaire captures age, location, assets, existing coverage, and risk priorities. Location-based risk databases (flood zone maps, crime statistics, wildfire indices) provide context for scenario modeling. Premium calculation APIs or rate tables allow cost comparison. Finally, the agent maintains a structured store of extracted plan details — coverage limits, deductibles, exclusions, riders — normalized into a comparable schema.</p>
+
+  <h2>Actions</h2>
+  <p>The agent's workflow proceeds through distinct phases. It begins by collecting the user's profile and priorities through a structured interview. It then ingests each plan document, chunking large PDFs and extracting key terms: coverage types, limits, deductibles, exclusions, waiting periods, and conditions. These extracted fields are normalized into a common schema so plans can be compared directly.</p>
+  <p>Next, the agent runs scenario analysis. For each major risk event relevant to the user's profile — car accident, home burglary, natural disaster, liability lawsuit — it calculates what each plan would actually pay after deductibles and exclusions. It then scores plans against the user's stated priorities (lowest total cost, broadest coverage, fewest exclusions) and generates a comparison table with a top recommendation, citing specific policy sections as evidence.</p>
+  <p>The user can then ask follow-up questions — "What if I add my teenage driver?" or "Show me only plans that cover flooding" — and the agent recalculates and re-ranks without starting over.</p>
+
+  <h2>Feedback &amp; Iterative Refinement</h2>
+  <p>Feedback operates at two levels. Within a session, the user steers the agent by correcting misread terms ("actually my current policy does cover rental cars"), adjusting priorities, and asking scenario questions. The agent updates its internal comparison state and re-ranks accordingly.</p>
+  <p>Across sessions, the agent improves its extraction accuracy. If a user identifies that the agent misinterpreted an exclusion clause, that correction refines how similar clauses are parsed in future documents. Over time, the agent builds a more reliable mapping between legal language patterns and their practical coverage implications — moving from generic document understanding toward domain-specific insurance literacy.</p>
+
+  <hr class="section-break">
+
+  <!-- ============================================================ -->
+  <h1>Capstone Design Update: Retrieval Decision for an Insurance Policy Recommendation Agent</h1>
+  <p class="date">May 30</p>
+
+  <p>My capstone project focuses on the development of an Insurance Policy Comparison and Recommendation Agent designed to assist users in navigating the complexities of auto, home, and life insurance. This agent moves beyond simple summarization to provide active decision support, evaluating coverage limits, exclusions, deductibles, and riders to calculate realistic out-of-pocket costs across various loss scenarios. While earlier modules established the reasoning loop and memory architecture, this update defines the retrieval strategy — determining its necessity, integration methods, and observable impact on system reliability.</p>
+
+  <h2>1) Is retrieval required?</h2>
+  <p>Yes, a retrieval mechanism is foundational to this use case.</p>
+  <p>A standalone language model approach is insufficient for the high-stakes nature of insurance. Policy documents are notoriously long, legally dense, and specific; critical information is often distributed across disjointed sections and endorsements. Without grounding, an LLM is prone to producing plausible yet unverified claims that fail to capture the exact nuances of a plan. Retrieval is architecturally mandated for three primary reasons:</p>
+  <ul>
+    <li><strong>Grounding:</strong> Every plan-specific assertion must be anchored in actual policy evidence to prevent hallucinations.</li>
+    <li><strong>Cross-document comparison:</strong> The agent requires a structured way to align disparate terminology and compare multiple policies simultaneously.</li>
+    <li><strong>Traceability:</strong> Verifiable citations are essential for establishing user trust in financial recommendations.</li>
+  </ul>
+  <p>Given the consequences of inaccurate advice, retrieval is not an enhancement but a core reliability requirement.</p>
+
+  <h2>2) How retrieval is integrated</h2>
+  <p>The architecture incorporates a semantic retrieval mechanism leveraging an external document store and a vector index.</p>
+  <p>To maintain data integrity, the corpus utilizes public, synthetic, or anonymized policy forms that mirror real-world structures. The retrieval workflow consists of several distinct phases: ingesting documents to extract structured text; attaching critical metadata such as policy ID and jurisdiction; chunking content into semantically coherent units; and indexing these via vector embeddings. At query time, the agent retrieves the top-k chunks based on the user's profile and intent, grounding its reasoning in this retrieved evidence and enforcing strict citations for all claims.</p>
+
+  <h2>3) How retrieval changes output behavior</h2>
+  <p>Retrieval significantly elevates the quality and accuracy of the agent's recommendations. For instance, when a user asks, "Does Plan C cover flood damage, and what is my likely out-of-pocket risk?" the behavior shifts dramatically:</p>
+  <ul>
+    <li><strong>Without retrieval:</strong> The model may offer generic observations — such as noting that flood insurance often requires a separate policy — without verifying the specific terms of Plan C.</li>
+    <li><strong>With retrieval:</strong> The agent identifies specific exclusion clauses and rider options within the document. It can then provide a grounded assessment: "Plan C excludes flood damage unless the optional Water Backup rider is attached; without it, your estimated exposure in this flood zone remains high."</li>
+  </ul>
+  <p>This illustrates that retrieval does more than add context; it fundamentally changes the decision outcome by ensuring reliability.</p>
+
+  <h2>4) Key retrieval design choices</h2>
+  <p>Several strategic choices were made to optimize precision and explainability:</p>
+  <ul>
+    <li>Section-aware chunking (approx. 300–500 tokens with 20% overlap) to preserve legal context</li>
+    <li>Metadata-aware filtering to restrict searches by jurisdiction</li>
+    <li>A top-k reranking strategy that selects the most relevant fragments for final reasoning</li>
+    <li>Session-aware retrieval to guide reranking based on user-stated priorities, such as a preference for "broadest protection" over "lowest premium"</li>
+  </ul>
+
+  <h2>5) Retrieval failure mode and mitigation</h2>
+  <p>A primary risk is "semantic near-miss" retrieval, where the system identifies text that sounds relevant but is legally distinct (e.g., confusing general "water damage" with "flood"). This is mitigated through a layered approach:</p>
+  <ul>
+    <li>Hybrid retrieval that combines vector similarity with keyword checks for high-risk legal terms</li>
+    <li>Strict metadata constraints</li>
+    <li>Reasoning checks that require the agent to explicitly extract coverage conditions before making a recommendation</li>
+  </ul>
+  <p>If evidence is conflicting, the agent is programmed to ask clarifying questions rather than generating a guess.</p>
+
+  <hr class="section-break">
+
+  <!-- ============================================================ -->
+  <h1>Capstone Design Update: Tree-of-Thought Reasoning Architecture</h1>
+  <p class="date">June 2026</p>
+
+  <p>This update integrates Tree-of-Thought (ToT) reasoning into the Insurance Policy Comparison and Recommendation Agent. Earlier modules established retrieval for grounding and a linear reasoning loop for extraction and normalization. ToT replaces premature single-path reasoning in the highest-uncertainty phase — scenario analysis and plan recommendation — with structured exploration, explicit evaluation, and pruning. The design maps conceptual ToT roles to CrewAI, LangChain, and MCP for implementation in later modules.</p>
+
+  <h2>1) Where ToT Reasoning Improves the Agent</h2>
+  <p>ToT is applied to <strong>Phase 4–5 of the workflow: scenario analysis and plan scoring/recommendation</strong> (after user profile collection, document ingestion, and schema normalization).</p>
+  <p>A linear chain-of-thought fails here for three structural reasons:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Failure mode</th>
+        <th>Why linear CoT breaks</th>
+        <th>Why ToT is a better fit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Premature commitment</strong></td>
+        <td>A single pass often locks onto the first plausible reading of an ambiguous clause (e.g., treating "water damage" as flood coverage when the policy excludes surface water).</td>
+        <td>ToT generates multiple interpretation branches and evaluates each against retrieved evidence before committing.</td>
+      </tr>
+      <tr>
+        <td><strong>High branching</strong></td>
+        <td>Comparing <em>N</em> plans across <em>M</em> risk scenarios yields combinatorial paths (plan × scenario × clause interpretation × rider attachment). Linear reasoning collapses this into one narrative and drops alternatives.</td>
+        <td>ToT explores parallel hypotheses (e.g., "Plan B covers flood" vs. "Plan B excludes flood unless Rider 12 is attached") and retains the best-scoring paths.</td>
+      </tr>
+      <tr>
+        <td><strong>Constraint complexity</strong></td>
+        <td>Final ranking must reconcile grounding citations, arithmetic scenario payouts, user priority weights, and jurisdictional metadata simultaneously. Linear chains optimize locally (e.g., lowest premium) and miss globally better options.</td>
+        <td>ToT evaluates intermediate states against a multi-criteria rubric and prunes branches that violate hard constraints (missing citations, arithmetic errors, excluded perils in a flood zone).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>ToT does <strong>not</strong> replace retrieval or extraction. It sits downstream of grounded document retrieval, where interpretive ambiguity and multi-plan tradeoffs are highest.</p>
+
+  <h2>2) ToT Structure</h2>
+
+  <h3>What a "thought" represents</h3>
+  <p>A <strong>thought</strong> is a grounded intermediate reasoning step — not free-form prose. Each thought is a structured object containing:</p>
+  <ul>
+    <li>A <strong>claim</strong> (e.g., "Plan C excludes flood unless Water Backup endorsement is present")</li>
+    <li><strong>Evidence</strong> (retrieved chunk IDs and policy section references)</li>
+    <li>A <strong>partial state update</strong> (coverage classification, deductible applied, estimated payout for one scenario)</li>
+    <li>A <strong>confidence tag</strong> (pending evaluation)</li>
+  </ul>
+  <p>Example thought at depth 2: <em>"Under a $150K flood loss in Zone AE, Plan A pays $148K after $2K deductible; citation: Plan A, Section IV, Perils Insured."</em></p>
+
+  <h3>Nodes, branches, and depth</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Concept</th>
+        <th>Definition in this system</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Node</strong></td>
+        <td>A partial comparison state: <code>{user_profile, active_plans[], scenario_id, accumulated_thoughts[], running_scores{}, open_constraints[]}</code>. Each node is one point in the reasoning tree.</td>
+      </tr>
+      <tr>
+        <td><strong>Branch</strong></td>
+        <td>An alternative reasoning path from a parent node — e.g., a different clause interpretation, rider assumption, or plan-ranking hypothesis.</td>
+      </tr>
+      <tr>
+        <td><strong>Depth</strong></td>
+        <td>The number of reasoning layers from the root query. Depth is tied to workflow stages, not token count.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Depth layers:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Depth</th>
+        <th>Stage</th>
+        <th>Example branch content</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>0 (root)</td>
+        <td>Query framing</td>
+        <td>"Recommend best home plan for flood-zone homeowner prioritizing broad coverage"</td>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>Peril interpretation</td>
+        <td>Branch A: flood excluded; Branch B: flood covered via endorsement; Branch C: flood covered under all-perils</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Scenario calculation</td>
+        <td>For each interpretation, compute payout across 3–5 user-relevant loss scenarios</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Priority-weighted scoring</td>
+        <td>Apply user weights (coverage breadth 0.4, cost 0.3, exclusions 0.3) to produce plan scores</td>
+      </tr>
+      <tr>
+        <td>4 (leaf)</td>
+        <td>Recommendation synthesis</td>
+        <td>Final ranked plan list with citations and tradeoff summary</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Branching factor and depth limit</h3>
+  <ul>
+    <li><strong>Branching factor:</strong> 2–3 child branches per node at depth 1 (interpretation variants); 2 at depth 2 (scenario emphasis variants, e.g., catastrophic vs. moderate loss); 1 at depth 3–4 (deterministic scoring from validated inputs). Effective average branching factor: <strong>~2.5</strong>.</li>
+    <li><strong>Depth limit:</strong> <strong>4</strong> (root → interpretation → scenario → scoring → leaf). No expansion beyond depth 4.</li>
+  </ul>
+
+  <h3>Termination and final output selection</h3>
+  <p>The system terminates when <strong>any</strong> of the following conditions is met:</p>
+  <ol>
+    <li><strong>Beam convergence:</strong> One branch dominates the active beam (score ≥ next-best by a margin of ≥ 0.15 on the composite rubric).</li>
+    <li><strong>Depth limit reached:</strong> All surviving branches at depth 4 are leaf nodes ready for synthesis.</li>
+    <li><strong>Hard failure:</strong> All branches at a depth fail grounding or arithmetic validation (triggers clarifying question to user instead of a guess).</li>
+  </ol>
+  <p><strong>Final output:</strong> The highest-scoring leaf node after critic evaluation and beam selection. The Decision Maker agent synthesizes this into a comparison table and recommendation with citations. If the top two leaves are within 0.05 composite score, both are presented with an explicit tie-break rationale (see Section 4).</p>
+
+  <h2>3) Evaluation and Pruning Mechanism</h2>
+
+  <h3>Evaluation criteria (scoring rubric)</h3>
+  <p>Each candidate branch receives a composite score (0.0–1.0) across five dimensions:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Criterion</th>
+        <th>Weight</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Grounding</strong></td>
+        <td>0.30</td>
+        <td>Every claim cites a retrieved policy chunk; no uncited assertions.</td>
+      </tr>
+      <tr>
+        <td><strong>Consistency</strong></td>
+        <td>0.20</td>
+        <td>Interpretations do not contradict other evidence within the same plan document.</td>
+      </tr>
+      <tr>
+        <td><strong>Scenario completeness</strong></td>
+        <td>0.20</td>
+        <td>All user-relevant scenarios (from profile) are computed, not skipped.</td>
+      </tr>
+      <tr>
+        <td><strong>Arithmetic validity</strong></td>
+        <td>0.15</td>
+        <td>Payout calculations pass tool-based verification (deductible, limits, co-insurance).</td>
+      </tr>
+      <tr>
+        <td><strong>Priority alignment</strong></td>
+        <td>0.15</td>
+        <td>Weighted score reflects user-stated priorities from session memory.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Hard gates (instant prune regardless of score):</strong></p>
+  <ul>
+    <li>Missing citation on any coverage claim</li>
+    <li>Arithmetic mismatch vs. calculator tool output (&gt; $500 tolerance)</li>
+    <li>Jurisdiction metadata mismatch (plan filtered for wrong state)</li>
+  </ul>
+
+  <h3>Who performs evaluation</h3>
+  <p>Evaluation is <strong>hybrid</strong>:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Evaluator</th>
+        <th>Role</th>
+        <th>Tool</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Critic Agent</strong></td>
+        <td>Scores grounding, consistency, and priority alignment; flags ambiguous clauses</td>
+        <td>CrewAI — <code>Policy Critic</code> agent</td>
+      </tr>
+      <tr>
+        <td><strong>Heuristic checks</strong></td>
+        <td>Enforces hard gates (citation presence, schema validity)</td>
+        <td>LangChain — validation functions in LCEL pipeline</td>
+      </tr>
+      <tr>
+        <td><strong>Tool calls</strong></td>
+        <td>Verifies payout arithmetic and peril classification</td>
+        <td>LangChain tools + MCP-exposed premium/scenario calculator</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>The Critic Agent produces a structured score vector; heuristics and tools act as <strong>binary pass/fail gates</strong> before the Critic's soft scores are applied.</p>
+
+  <h3>Pruning thresholds and failure conditions</h3>
+  <ul>
+    <li><strong>Prune:</strong> Composite score &lt; <strong>0.55</strong> at depths 1–2; &lt; <strong>0.65</strong> at depths 3–4 (stricter near output).</li>
+    <li><strong>Prune:</strong> Any hard gate failure.</li>
+    <li><strong>Prune:</strong> Branch duplicates an existing node state (same interpretation + same scenario outcomes) — deduplication via MCP state hash.</li>
+    <li><strong>Failure condition:</strong> Fewer than 1 branch survives after depth 2 → halt ToT, return to user with specific evidence gap ("Cannot determine flood coverage for Plan C; endorsement schedule not found in corpus").</li>
+  </ul>
+
+  <h3>Tie resolution</h3>
+  <ol>
+    <li><strong>Primary:</strong> Rerank by grounding score (highest wins).</li>
+    <li><strong>Secondary:</strong> Critic Agent vote — if grounding is within 0.03, the Critic selects the branch with fewer unresolved ambiguities.</li>
+    <li><strong>Tertiary:</strong> Present both top branches to the user as a tied recommendation with explicit tradeoff language; do not silently pick one.</li>
+  </ol>
+
+  <h2>4) Search Strategy Selection</h2>
+  <p><strong>Primary strategy: Beam search (beam width = 3).</strong></p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Strategy</th>
+        <th>Fit for this use case</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>BFS</td>
+        <td>Explores too broadly across plan × scenario combinations; cost scales poorly with 4+ plans.</td>
+      </tr>
+      <tr>
+        <td>DFS</td>
+        <td>Risks committing to a deep but wrong interpretation path (e.g., incorrect exclusion reading) before alternatives are considered.</td>
+      </tr>
+      <tr>
+        <td><strong>Beam search</strong></td>
+        <td><strong>Selected.</strong> Maintains the top-3 branches at each depth — enough diversity to catch misread clauses without full combinatorial explosion. Aligns with financial decision-making where a small set of strong hypotheses should be compared, not every possible path.</td>
+      </tr>
+      <tr>
+        <td>Monte Carlo sampling</td>
+        <td>Poor fit for deterministic, citation-backed reasoning; introduces unnecessary stochasticity in payout calculations.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>Compute, latency, and cost constraints:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Constraint</th>
+        <th>Limit</th>
+        <th>Enforcement</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Max LLM calls per recommendation</td>
+        <td><strong>~25</strong> (3 branches × 4 depths + critic evaluations)</td>
+        <td>LangChain orchestrator budget counter</td>
+      </tr>
+      <tr>
+        <td>Max latency</td>
+        <td><strong>45 seconds</strong> per recommendation cycle</td>
+        <td>Timeout aborts lowest-scoring beam branch first</td>
+      </tr>
+      <tr>
+        <td>Retrieval calls per branch</td>
+        <td><strong>≤ 5</strong></td>
+        <td>Cached at node level via MCP; sibling branches reuse parent retrievals</td>
+      </tr>
+      <tr>
+        <td>Token budget per branch</td>
+        <td><strong>~8K</strong> context (retrieved chunks + thought chain)</td>
+        <td>Truncate thought history to active path only</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>If the 45-second budget is exceeded mid-search, the controller freezes expansion and selects the best-scoring node at the current depth (graceful degradation).</p>
+
+  <h2>5) ToT Role-to-Tool Mapping</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Conceptual role</th>
+        <th>Responsibility</th>
+        <th>Primary tool</th>
+        <th>Secondary tool</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Thought Generator</strong></td>
+        <td>Proposes 2–3 alternative interpretations, scenario calculations, or ranking hypotheses at each tree depth</td>
+        <td><strong>CrewAI</strong> — <code>Coverage Analyst</code> agent with task templates per depth layer</td>
+        <td><strong>LangChain</strong> — LCEL chain invokes generator with retrieved context injected</td>
+      </tr>
+      <tr>
+        <td><strong>Critic / Evaluator</strong></td>
+        <td>Scores branches against rubric; enforces grounding and consistency; recommends prune/keep</td>
+        <td><strong>CrewAI</strong> — <code>Policy Critic</code> agent (separate role from generator to avoid self-confirmation bias)</td>
+        <td><strong>LangChain</strong> — hard-gate validators + arithmetic tool calls</td>
+      </tr>
+      <tr>
+        <td><strong>Decision Maker / Controller</strong></td>
+        <td>Runs beam search loop, applies pruning thresholds, selects final leaf, synthesizes user-facing output</td>
+        <td><strong>LangChain</strong> — LCEL orchestration graph (branch loop, conditional edges, budget enforcement)</td>
+        <td><strong>CrewAI</strong> — <code>Recommendation Synthesizer</code> agent for final narrative generation</td>
+      </tr>
+      <tr>
+        <td><strong>Memory / State Manager</strong></td>
+        <td>Stores tree structure, node states, branch scores, cached retrievals, and session priorities; enables branch deduplication and cross-turn re-scoring</td>
+        <td><strong>MCP</strong> — shared state server exposing <code>branch_store</code>, <code>session_profile</code>, and <code>retrieval_cache</code> resources</td>
+        <td><strong>LangChain</strong> — checkpointing for orchestrator resume after user follow-up</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>CrewAI: agent definition and task routing</h3>
+  <p>Three CrewAI agents with explicit role separation:</p>
+  <ol>
+    <li><strong>Coverage Analyst</strong> (Thought Generator) — generates candidate thoughts; never evaluates its own output.</li>
+    <li><strong>Policy Critic</strong> (Evaluator) — receives candidate thoughts + evidence; returns score vector and prune recommendation.</li>
+    <li><strong>Recommendation Synthesizer</strong> (Decision Maker delegate) — converts winning leaf node into comparison table and justified recommendation.</li>
+  </ol>
+  <p>CrewAI task routing assigns depth-specific prompts (interpretation tasks at depth 1, calculation tasks at depth 2, etc.) and passes MCP state handles between tasks.</p>
+
+  <h3>LangChain: control flow and orchestration</h3>
+  <p>LangChain owns the <strong>ToT loop</strong>:</p>
+  <pre>retrieve → normalize → [ToT loop: generate → evaluate → prune → expand] → synthesize</pre>
+  <p>Implemented as an LCEL graph with:</p>
+  <ul>
+    <li>Conditional edges on critic scores (expand vs. prune vs. terminate)</li>
+    <li>Tool integration for payout calculator and citation validator</li>
+    <li>Budget counters for LLM calls and latency</li>
+  </ul>
+
+  <h3>MCP: shared state and branch tracking</h3>
+  <p>MCP provides the <strong>branch-aware memory layer</strong>:</p>
+  <ul>
+    <li><code>branch_store</code>: tree of nodes with parent/child links, scores, and thought objects</li>
+    <li><code>session_profile</code>: user priorities and profile (updated on follow-up questions)</li>
+    <li><code>retrieval_cache</code>: keyed by <code>(plan_id, peril, jurisdiction)</code> to avoid redundant retrieval across sibling branches</li>
+  </ul>
+  <p>When the user asks a follow-up ("What if I add my teenage driver?"), the controller updates <code>session_profile</code> via MCP and re-enters the ToT loop from depth 2 (scenario recalculation) rather than restarting from scratch.</p>
+
+  <h2>6) ToT Insertion Point in Architecture</h2>
+  <pre>┌─────────────────────────────────────────────────────────────────┐
+│  Phase 1: User profile collection          [CrewAI interview]   │
+├─────────────────────────────────────────────────────────────────┤
+│  Phase 2: Document ingest + chunk          [LangChain + store]  │
+├─────────────────────────────────────────────────────────────────┤
+│  Phase 3: Normalize to comparable schema   [LangChain extract]  │
+├─────────────────────────────────────────────────────────────────┤
+│  Phase 4–5: ★ ToT REASONING INSERTION POINT ★                   │
+│    ┌─────────────────────────────────────────────────────────┐  │
+│    │  LangChain beam-search controller                       │  │
+│    │    → CrewAI Coverage Analyst (generate branches)        │  │
+│    │    → Retrieval (ground branches)     [existing module]  │  │
+│    │    → CrewAI Policy Critic (evaluate + prune)            │  │
+│    │    → MCP branch_store (persist tree state)              │  │
+│    │    → CrewAI Synthesizer (final output from winning leaf)│  │
+│    └─────────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────┤
+│  Phase 6: User follow-up / re-score        [MCP session update] │
+└─────────────────────────────────────────────────────────────────┘</pre>
+  <p>ToT activates <strong>only after</strong> plans are normalized into the comparable schema and retrieval is available. Extraction and normalization remain linear pipelines; ToT governs interpretive and decision reasoning where ambiguity and tradeoffs peak.</p>
+
+  <h2>7) Risk and Mitigation</h2>
+
+  <h3>Risk: Weak evaluation signals leading to pruning the best branch</h3>
+  <p>The Critic Agent may undervalue a legally correct but unusually worded branch — for example, a valid coverage path buried in endorsement cross-references that scores low on consistency because evidence spans multiple document sections. Standard semantic similarity and single-pass consistency checks can prune the branch that would produce the most accurate recommendation.</p>
+
+  <h3>Mitigation: Grounding-first gate with cross-section consistency check</h3>
+  <p>Before any branch is pruned for low consistency score:</p>
+  <ol>
+    <li><strong>Grounding gate:</strong> If grounding score ≥ 0.85 and citations span ≥ 2 retrieved chunks from the same plan, the branch is <strong>protected from consistency-based pruning</strong> and flagged for expanded retrieval (one additional targeted query for cross-referenced endorsement sections).</li>
+    <li><strong>Cross-section linker:</strong> A LangChain tool resolves internal policy references ("see Endorsement HO-042") by fetching linked chunks before re-evaluation.</li>
+    <li><strong>Re-score:</strong> The Critic re-evaluates the branch with expanded evidence. Only if consistency remains &lt; 0.50 after expansion is the branch pruned.</li>
+  </ol>
+  <p>This prevents premature elimination of correct but structurally complex reasoning paths while still pruning genuinely unsupported branches.</p>
+
+  <hr class="section-break">
+
+  <h2>Testability</h2>
+  <p>This architecture is designed to be testable in later modules:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Test</th>
+        <th>Method</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ToT vs. linear CoT accuracy</td>
+        <td>Run identical plan sets through both pipelines; compare grounding citation rate and scenario payout accuracy against synthetic ground-truth labels</td>
+      </tr>
+      <tr>
+        <td>Pruning precision</td>
+        <td>Inject known ambiguous clauses; verify protected branches survive grounding-first gate</td>
+      </tr>
+      <tr>
+        <td>Cost bounds</td>
+        <td>Assert LLM call count ≤ 25 and latency ≤ 45s on benchmark queries</td>
+      </tr>
+      <tr>
+        <td>Follow-up re-entry</td>
+        <td>Update session profile via MCP; confirm ToT resumes at depth 2 without full tree rebuild</td>
+      </tr>
+      <tr>
+        <td>Tie handling</td>
+        <td>Construct plans with composite scores within 0.05; verify dual recommendation output</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr class="section-break">
+
+  <!-- ============================================================ -->
+  <h1>Capstone Design Update: Multi-Agent Architecture</h1>
+  <p class="date">June 2026</p>
+
+  <h2>Problem and Why Multi-Agent</h2>
+  <p>My capstone agent helps consumers and brokers compare auto, home, and life insurance plans by analyzing coverage limits, exclusions, deductibles, and realistic out-of-pocket costs across loss scenarios — grounded in actual policy language, not premium rankings alone.</p>
+  <p>A single agent cannot reliably perform this work. Policy comparison spans distinct competencies: structured user interviewing, long-document extraction, semantic retrieval across legal text, multi-path interpretive reasoning, arithmetic scenario modeling, and adversarial quality review. Combining these in one agent increases hallucination risk, blurs accountability for errors, and makes it impossible to enforce grounding gates before recommendations are issued. A multi-agent design separates concerns so each agent has a narrow, testable mandate — similar to how a research workflow benefits from distinct planner, researcher, and writer roles.</p>
+
+  <h2>Agent Count and Rationale</h2>
+  <p>The system includes <strong>six agents</strong>, determined by task decomposition rather than arbitrary expansion:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Agent</th>
+        <th>Core responsibility</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Orchestrator</strong></td>
+        <td>Workflow routing, phase transitions, beam-search budget enforcement</td>
+      </tr>
+      <tr>
+        <td><strong>Profile Intake Agent</strong></td>
+        <td>Collects user profile, assets, location risks, and priority weights</td>
+      </tr>
+      <tr>
+        <td><strong>Document &amp; Retrieval Agent</strong></td>
+        <td>Ingests policy PDFs, normalizes schema, retrieves grounded evidence</td>
+      </tr>
+      <tr>
+        <td><strong>Scenario Reasoning Agent</strong></td>
+        <td>Generates ToT branches, interprets clauses, computes loss scenarios</td>
+      </tr>
+      <tr>
+        <td><strong>Policy Critic Agent</strong></td>
+        <td>Scores branches, enforces citation/arithmetic gates, prunes weak paths</td>
+      </tr>
+      <tr>
+        <td><strong>Recommendation Synthesizer</strong></td>
+        <td>Produces comparison table, ranked recommendation, and citations</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Six agents map to six workflow phases with minimal overlap. Fewer agents would merge extraction with evaluation (self-confirmation bias). More agents — e.g., separate chunking, embedding, and reranking agents — would add coordination overhead without proportional accuracy gains at this design stage.</p>
+
+  <h2>Coordination Strategy</h2>
+  <p>The architecture uses a <strong>hybrid coordination model</strong>:</p>
+  <p><strong>Sequential (Phases 1–3):</strong> Profile Intake → Document &amp; Retrieval → normalized plan store. This assembly-line flow ensures downstream agents operate on validated, structured inputs.</p>
+  <p><strong>Iterative graph (Phases 4–5):</strong> The Orchestrator runs a beam-search loop: Scenario Reasoning generates branches → Document &amp; Retrieval grounds them → Policy Critic evaluates → Orchestrator prunes or expands. This graph resembles a project network with feedback edges, not a single pass.</p>
+  <p><strong>Sequential (Phase 6):</strong> Recommendation Synthesizer converts the winning branch into user-facing output; Orchestrator handles follow-up re-entry at depth 2 without rebuilding the full tree.</p>
+
+  <h2>Communication Strategy</h2>
+  <p>Communication is <strong>mixed by phase</strong>:</p>
+  <ul>
+    <li><strong>One-way (Orchestrator → workers):</strong> Task assignments, depth-layer prompts, and budget limits flow top-down for efficiency.</li>
+    <li><strong>Two-way (Reasoning ↔ Critic):</strong> The Scenario Reasoning Agent submits candidate thoughts; the Policy Critic returns score vectors and prune/keep decisions. This validation loop prevents unchecked interpretive drift.</li>
+    <li><strong>Shared state (all agents via MCP):</strong> <code>session_profile</code>, <code>branch_store</code>, and <code>retrieval_cache</code> enable agents to read consistent context without passing full document history on every turn.</li>
+  </ul>
+  <p>LangChain orchestrates control flow; CrewAI defines agent roles and task routing; MCP maintains branch-aware memory across the ToT loop.</p>
+
+  <h2>Trade-offs</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Decision</th>
+        <th>Benefit</th>
+        <th>Cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Separate Critic Agent</td>
+        <td>Reduces self-confirmation bias; improves grounding enforcement</td>
+        <td>+1 agent, added latency per branch</td>
+      </tr>
+      <tr>
+        <td>Hybrid sequential + graph coordination</td>
+        <td>Reliable preprocessing; flexible reasoning where ambiguity peaks</td>
+        <td>Higher implementation complexity vs. pure pipeline</td>
+      </tr>
+      <tr>
+        <td>Two-way Reasoning–Critic loop</td>
+        <td>Catches misread exclusions before recommendation</td>
+        <td>~25 LLM calls and up to 45s per cycle</td>
+      </tr>
+      <tr>
+        <td>MCP shared state</td>
+        <td>Consistent branch tracking; efficient follow-up re-scoring</td>
+        <td>State synchronization risk if schemas drift</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Feedback loops improve reliability at the cost of latency — acceptable for high-stakes financial recommendations where incorrect coverage advice outweighs wait time.</p>
+
+  <h2>Scalability</h2>
+  <p>The architecture scales horizontally by design. The Document &amp; Retrieval Agent parallelizes per-plan ingestion; retrieval cache deduplicates sibling branch queries. The Orchestrator caps beam width (3) and depth (4), preventing combinatorial explosion as plan count grows. MCP session updates trigger partial ToT re-entry at depth 2 for follow-up queries, not full pipeline restarts. New insurance types can be added via the normalized schema without redesigning the Critic or Synthesizer.</p>
+  <p>Each agent is independently testable — extraction accuracy, retrieval precision, pruning recall, and synthesis citation rate — making the system evolvable across later implementation modules without architectural rework.</p>
+
+  <p class="date">Word count: ~560</p>
+
+</div>
+
+</body>
+</html>
