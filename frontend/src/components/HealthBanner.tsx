@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchHealth, type HealthResponse } from "./api";
+import { fetchHealth, type HealthResponse } from "../api";
 
 export function HealthBanner() {
   const [health, setHealth] = useState<HealthResponse | null>(null);

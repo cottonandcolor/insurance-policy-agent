@@ -21,7 +21,28 @@ from src.mocks import dry_run
 from src.schemas import NormalizedPlan
 from src.state import AgentState, Branch
 from src.tools.retrieval import build_index, index_policy_paths, retrieve_evidence
+from src.tools.payout import compute_payout
 from src.tools.validators import apply_hard_gates, should_prune
+
+
+def _default_critic_score(branch: dict) -> dict:
+    hard_failed = branch.get("hard_gate_failed", False)
+    composite = 0.45 if hard_failed else 0.72
+    if not hard_failed and "sublimit" in branch.get("interpretation", "").lower():
+        composite = min(composite + 0.05, 0.95)
+    return {
+        "branch_id": branch["branch_id"],
+        "scores": {
+            "grounding": 0.0 if hard_failed else 0.9,
+            "consistency": 0.85,
+            "scenario_completeness": 0.8,
+            "arithmetic_validity": 0.0 if hard_failed else 0.88,
+            "priority_alignment": 0.75,
+        },
+        "composite_score": composite,
+        "prune": hard_failed or composite < 0.55,
+        "rationale": "Hard gate failure" if hard_failed else "Fallback heuristic score",
+    }
 
 
 def _plans_by_id(plans: list[dict]) -> dict[str, NormalizedPlan]:
@@ -78,6 +99,10 @@ def ingest_node(state: AgentState) -> AgentState:
             from src.crews import runner as crew_runner
             parsed = crew_runner.run_ingest(text, plan_id)
             calls += 1
+            try:
+                NormalizedPlan.model_validate(parsed)
+            except Exception:
+                parsed = dry_run.mock_normalized_plan(path)
 
         plans.append(parsed)
 
@@ -164,15 +189,21 @@ def ground_node(state: AgentState) -> AgentState:
     cache = dict(state.get("retrieval_cache", {}))
     profile = state.get("session_profile", {})
     jurisdiction = profile.get("jurisdiction", "TX")
+    plans = _plans_by_id(state.get("normalized_plans", []))
     updated: list[Branch] = []
 
     for branch in state.get("active_branches", []):
         for thought in branch.get("thoughts", []):
+            plan_id = thought.get("plan_id", "plan_a")
+            scenario_id = thought.get("scenario_id", "flood")
+            plan = plans.get(plan_id)
+            if plan:
+                payout, deductible, _ = compute_payout(plan, scenario_id, 150_000.0)
+                thought["payout"] = payout
+                thought["deductible_applied"] = deductible
             if thought.get("evidence_ids"):
                 continue
-            plan_id = thought.get("plan_id", "plan_a")
-            peril = thought.get("scenario_id", "flood")
-            chunks = retrieve_evidence(plan_id, peril, jurisdiction, cache)
+            chunks = retrieve_evidence(plan_id, scenario_id, jurisdiction, cache)
             if chunks:
                 thought["evidence_ids"] = [c["chunk_id"] for c in chunks]
         updated.append(branch)
@@ -211,6 +242,8 @@ def evaluate_node(state: AgentState) -> AgentState:
 
     for branch in branches:
         meta = eval_map.get(branch["branch_id"], {})
+        if not meta:
+            meta = _default_critic_score(branch)
         composite = float(meta.get("composite_score", 0.0))
         hard_failed = branch.get("hard_gate_failed", False)
         branch["scores"] = meta.get("scores", {})

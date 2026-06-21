@@ -20,8 +20,8 @@ export default function App() {
   const [profile, setProfile] = useState<ProfileInput>(defaultProfile);
   const [files, setFiles] = useState<File[]>([]);
   const [useDefaults, setUseDefaults] = useState(true);
-  const [dryRun, setDryRun] = useState(true);
-  const [quick, setQuick] = useState(false);
+  const [dryRun, setDryRun] = useState(false);
+  const [quick, setQuick] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
