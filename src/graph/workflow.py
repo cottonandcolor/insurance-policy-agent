@@ -20,7 +20,7 @@ from src.graph.routing import should_continue_tot
 from src.mocks import dry_run
 from src.schemas import NormalizedPlan
 from src.state import AgentState, Branch
-from src.tools.retrieval import build_index, retrieve_evidence
+from src.tools.retrieval import build_index, index_policy_paths, retrieve_evidence
 from src.tools.validators import apply_hard_gates, should_prune
 
 
@@ -53,7 +53,11 @@ def intake_node(state: AgentState) -> AgentState:
 # ── Step 2: Index policies ───────────────────────────────────────────────
 
 def index_node(state: AgentState) -> AgentState:
-    count = build_index()
+    paths = state.get("policy_paths", [])
+    if paths:
+        count = index_policy_paths(paths)
+    else:
+        count = build_index()
     return {"indexed_chunks": count}
 
 

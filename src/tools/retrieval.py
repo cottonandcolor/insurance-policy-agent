@@ -24,6 +24,39 @@ def _collection():
     )
 
 
+def index_policy_paths(paths: list[str | Path]) -> int:
+    """Index specific .txt policy files into Chroma (upsert by chunk id)."""
+    global _index_ready
+    col = _collection()
+    all_chunks: list[RetrievedChunk] = []
+
+    for path_str in paths:
+        path = Path(path_str)
+        if path.suffix.lower() != ".txt" or not path.exists():
+            continue
+        all_chunks.extend(chunk_policy_file(path))
+
+    if not all_chunks:
+        _index_ready = True
+        return col.count()
+
+    col.upsert(
+        ids=[c.chunk_id for c in all_chunks],
+        documents=[c.text for c in all_chunks],
+        metadatas=[
+            {
+                "plan_id": c.plan_id,
+                "section": c.section,
+                "jurisdiction": c.jurisdiction,
+                "peril_tags": ",".join(c.peril_tags),
+            }
+            for c in all_chunks
+        ],
+    )
+    _index_ready = True
+    return col.count()
+
+
 def build_index(policy_dir: Path | None = None) -> int:
     """Index all .txt policies. Returns chunk count."""
     global _index_ready

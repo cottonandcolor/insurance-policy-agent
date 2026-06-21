@@ -1,12 +1,36 @@
-"""CrewAI agent definitions."""
+"""CrewAI agent definitions with pluggable LLM providers."""
+
+from __future__ import annotations
 
 from crewai import Agent, LLM
 
-from src.config import OPENAI_API_KEY, OPENAI_MODEL
+from src.config import (
+    LLM_PROVIDER,
+    OLLAMA_BASE_URL,
+    OLLAMA_MODEL,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
+    get_llm_mode_label,
+)
 
 
 def _llm() -> LLM:
-    return LLM(model=f"openai/{OPENAI_MODEL}", api_key=OPENAI_API_KEY, temperature=0)
+    if LLM_PROVIDER == "ollama":
+        return LLM(
+            model=f"ollama/{OLLAMA_MODEL}",
+            base_url=OLLAMA_BASE_URL,
+            temperature=0,
+        )
+    if LLM_PROVIDER == "openai":
+        return LLM(
+            model=f"openai/{OPENAI_MODEL}",
+            api_key=OPENAI_API_KEY,
+            temperature=0,
+        )
+    raise ValueError(
+        "LLM not configured for dry_run. Set dry_run=True in run_agent() "
+        "or set LLM_PROVIDER=ollama|openai."
+    )
 
 
 def profile_intake_agent() -> Agent:
