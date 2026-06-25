@@ -48,6 +48,7 @@
     <h1>Insurance Policy Comparison &amp; Recommendation Agent</h1>
     <p>A grounded multi-agent system for insurance decision support</p>
     <p class="meta">Preeti Dave &nbsp;|&nbsp; preetidav@gmail.com &nbsp;|&nbsp; June 2026</p>
+    <p class="github" style="color:#fff;margin-top:16px;font-size:14pt;">github.com/cottonandcolor/insurance-policy-agent</p>
     <p class="meta" style="margin-top:48px;font-size:12pt;">Press → or Space to advance &nbsp;|&nbsp; ← to go back</p>
   </div>
 
@@ -78,20 +79,20 @@
   <!-- SLIDE 4 -->
   <div class="slide" data-n="4">
     <h2>Architecture Overview</h2>
-    <pre>Phase 1   Profile Intake Agent          (CrewAI)
-Phase 2   Chroma Index + Chunking
-Phase 3   Document &amp; Retrieval Agent    (CrewAI)
-Phase 4–5 ToT Beam Loop: Reasoning → Ground → Critic → Prune
-Phase 6   Recommendation Synthesizer    (CrewAI)
+    <pre>Profile Intake → Index &amp; Normalize → ToT Beam Loop → Synthesize
+                      ↑                    ↓
+                 Chroma RAG         Critic + Hard Gates
           ─────────────────────────────────────────
-          LangGraph Orchestrator + Shared State</pre>
+          LangGraph Orchestrator + Shared State
+          CLI · FastAPI · React UI</pre>
     <div>
       <span class="badge">LangGraph</span>
-      <span class="badge">CrewAI (6 agents)</span>
+      <span class="badge">6 agent roles</span>
       <span class="badge">Chroma RAG</span>
       <span class="badge">ToT beam search</span>
+      <span class="badge">Ollama / OpenAI</span>
     </div>
-    <div class="speaker"><strong>Say (~1.5 min):</strong> "LangGraph orchestrates the workflow. CrewAI agents handle specialized roles. Chroma provides grounded retrieval. The ToT loop explores multiple interpretations — like whether flood is covered — before recommending."</div>
+    <div class="speaker"><strong>Say (~1.5 min):</strong> "LangGraph orchestrates the workflow. Six specialist roles handle intake, retrieval, reasoning, criticism, and synthesis. Chroma provides grounded retrieval. The ToT loop explores multiple interpretations — like whether flood is covered — before recommending."</div>
   </div>
 
   <!-- SLIDE 5 -->
@@ -120,7 +121,7 @@ Phase 6   Recommendation Synthesizer    (CrewAI)
         <tr><td>Tree-of-Thought</td><td>Beam search + critic pruning</td></tr>
         <tr><td>Multi-agent</td><td>Six roles, hybrid coordination</td></tr>
         <tr><td>Safety</td><td>Guardrails + human escalation</td></tr>
-        <tr><td>Implementation</td><td>LangGraph + CrewAI + Chroma + tests</td></tr>
+        <tr><td>Integration</td><td>LangGraph + React UI + Ollama + 31 tests</td></tr>
       </tbody>
     </table>
     <div class="speaker"><strong>Say (~1 min):</strong> "Each checkpoint added a testable layer — from concept to retrieval to reasoning to agents to safety to working code."</div>
@@ -132,9 +133,9 @@ Phase 6   Recommendation Synthesizer    (CrewAI)
     <div class="two-col">
       <div>
         <ul>
-          <li>Python · LangGraph · CrewAI</li>
-          <li>ChromaDB · OpenAI GPT-4o-mini</li>
-          <li>Pydantic schemas + hard gates</li>
+          <li>Python · LangGraph · ChromaDB</li>
+          <li>Ollama (Mistral) or OpenAI</li>
+          <li>FastAPI + React demo UI</li>
           <li><code>python main.py --dry-run</code></li>
         </ul>
       </div>
@@ -157,14 +158,14 @@ Citations: plan_b:1, plan_a:2</pre>
     <table>
       <thead><tr><th>Metric</th><th>Target</th><th>Result</th></tr></thead>
       <tbody>
-        <tr><td>Unit tests</td><td>100%</td><td class="check">6/6 pass</td></tr>
+        <tr><td>Unit tests</td><td>100%</td><td class="check">31/31 pass</td></tr>
         <tr><td>Dry-run E2E</td><td>Completes</td><td class="check">Full pipeline OK</td></tr>
         <tr><td>Payout accuracy</td><td>≥90%</td><td class="check">Plan B: $95K verified</td></tr>
         <tr><td>Grounding rate</td><td>≥95%</td><td class="check">Hard gates enforce citations</td></tr>
         <tr><td>Real carrier forms</td><td>Benchmark</td><td class="warn">Not yet — synthetic only</td></tr>
       </tbody>
     </table>
-    <div class="speaker"><strong>Say (~1 min):</strong> "Six unit tests pass. Dry-run demonstrates the full agent loop. Main limitation: evaluation uses synthetic policies only."</div>
+    <div class="speaker"><strong>Say (~1 min):</strong> "Thirty-one unit tests pass. Dry-run demonstrates the full agent loop in under ten seconds. Live Ollama works but takes several minutes. Main limitation: synthetic policies only."</div>
   </div>
 
   <!-- SLIDE 9 -->

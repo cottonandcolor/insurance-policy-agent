@@ -1,169 +1,176 @@
-# Presentation Outline — 8–10 Minutes
+# Presentation Outline — 8–10 Minutes (Activity 7.1)
 
 **Insurance Policy Comparison & Recommendation Agent**  
-**For Canvas video submission**
-
-> Target: ~9 minutes at conversational pace (~900–1,000 words spoken)
-
----
-
-## Slide 1 — Title (30 sec)
-
-**Title:** Insurance Policy Comparison & Recommendation Agent  
-**Subtitle:** A grounded multi-agent system for insurance decision support  
-**Preeti Dave — Capstone — Agent Development — June 2026**
-
-**Say:**  
-"Hi, I'm Preeti Dave. My capstone project is an autonomous agent that helps consumers and brokers compare insurance plans — not just by price, but by what each plan actually pays when you file a claim."
+**Author:** Preeti Dave  
+**Audience:** Technical  
+**Target:** ~9:45 at conversational pace  
+**GitHub:** [github.com/cottonandcolor/insurance-policy-agent](https://github.com/cottonandcolor/insurance-policy-agent)  
+**Slides:** `presentation.html`
 
 ---
 
-## Slide 2 — Problem & User (1 min)
+## 1. Opening and project overview (~1 min)
+
+**Slide 1 — Title**
 
 **Bullets:**
-- 30–80 page policy documents, dense legal language
-- Comparison sites rank by premium, not coverage
-- Example: flood zone — one plan excludes flood, another covers with sublimit
-- **Users:** consumers and insurance brokers
+- Insurance Policy Comparison & Recommendation Agent
+- Preeti Dave — Agentic AI Capstone — June 2026
+- **GitHub:** github.com/cottonandcolor/insurance-policy-agent
 
-**Say:**  
-"The real-world problem is opacity. Choosing the wrong plan can leave a household exposed to tens of thousands in out-of-pocket loss. My agent targets consumers and brokers who need scenario-based comparison grounded in actual policy language."
+**Say:**
+> Hi, I'm Preeti Dave. My capstone is an autonomous Insurance Policy Comparison & Recommendation Agent — a decision-support system for consumers and brokers.
+>
+> The problem: people compare insurance by premium, but the real question is what each plan pays when you file a claim.
+>
+> The users: consumers shopping for home, auto, or life insurance — and brokers comparing options for clients.
+>
+> The goal: given a user profile and policy documents, the agent ingests plans, runs loss-scenario analysis, explores ambiguous interpretations, and recommends a best-fit plan with citations — advisory only, not a binding quote.
 
 ---
 
-## Slide 3 — System Goal (45 sec)
+## 2. Why this problem matters (~1 min)
+
+**Slide 2 — Problem & User**
 
 **Bullets:**
-- Input: user profile + insurance plans
-- Output: cited comparison table + ranked recommendation
-- Scope: advisory only — no binding quotes or purchases
-- Data: synthetic/public policies only
+- 30–80 page policies; comparison sites rank by price
+- Flood example: Plan A excludes flood; Plan B covers with sublimit
+- Wrong plan → zero payout on a $150K loss
+- Single prompt fails: too long, needs math, needs multiple interpretations
 
-**Say:**  
-"The system goal is to autonomously collect user requirements, analyze plans across loss scenarios, and recommend the best fit with citations. It's decision support — not a replacement for licensed advice."
+**Say:**
+> This problem matters because the financial stakes are high and the information is buried. A consumer in a flood zone might see two plans with similar premiums — but one excludes flood unless you buy a rider, while another covers flood only up to a sublimit.
+>
+> A single LLM prompt can't solve this. That's why an agent-based approach — with retrieval, reasoning loops, and guardrails — is appropriate.
 
 ---
 
-## Slide 4 — Architecture Overview (1.5 min)
+## 3. System architecture (~2 min)
 
-**Show diagram:**
+**Slide 3 — Goal** · **Slide 4 — Architecture**
 
+**Diagram:**
 ```
-Profile Intake → Index & Extract → ToT Beam Loop → Synthesize
-                      ↑                    ↓
-                  Chroma RAG         Critic + Hard Gates
+Profile Intake → Index & Normalize → ToT Beam Loop → Synthesize
+                         ↑                  ↓
+                    Chroma RAG         Critic + Hard Gates
 ```
 
 **Bullets:**
-- LangGraph orchestrator
-- 6 CrewAI agents
-- Chroma retrieval
-- ToT beam search (width 3, depth 4)
+- LangGraph orchestrator (state machine + conditional ToT loop)
+- 6 specialist roles: intake, retrieval, reasoning, critic, synthesizer, orchestrator
+- Chroma RAG + Pydantic schemas
+- ToT: expand → ground → hard gates → critic → prune
+- Shared state: profile, branches, retrieval cache
+- CLI + FastAPI + React UI
 
-**Say:**  
-"The architecture has three layers. LangGraph orchestrates the workflow. CrewAI agents handle specialized roles — intake, extraction, reasoning, criticism, and synthesis. Chroma provides grounded retrieval. The Tree-of-Thought loop in the middle explores multiple interpretations of ambiguous policy language — like whether flood is covered — before committing to a recommendation."
+**Say:**
+> LangGraph orchestrates the workflow. Six specialist roles handle intake, normalization, reasoning, criticism, and synthesis. Chroma provides section-aware retrieval. The ToT loop generates interpretation branches, grounds them with evidence, runs hard gates on citations and arithmetic, scores with a separate critic, and prunes weak paths before synthesis.
+>
+> Users interact via CLI, FastAPI, or a React demo UI.
 
 ---
 
-## Slide 5 — Key Design Decisions (1.5 min)
+## 4. Key design decisions (~1.5 min)
 
-**Bullets:**
+**Slide 5 — Design Decisions**
+
 | Decision | Why |
-|---|---|
+|----------|-----|
 | Retrieval required | Prevent hallucinated coverage |
-| Multi-agent | Separate reasoning from criticism |
-| ToT + beam search | Handle interpretive ambiguity |
+| Multi-agent (separate Critic) | Reduce self-confirmation bias |
+| ToT + beam search | Handle ambiguous clauses |
 | Fail-closed safety | Escalate when evidence is missing |
 
-**Say:**  
-"Four design decisions define the project. First, retrieval is mandatory — every claim must cite a policy chunk. Second, a separate Policy Critic agent prevents self-confirmation bias. Third, Tree-of-Thought beam search explores alternatives when clauses are ambiguous. Fourth, the system fails closed — it escalates to a human rather than guessing."
+**Say:**
+> Four decisions from across the program define the design. Retrieval is mandatory — no citation, no claim. A separate Policy Critic evaluates branches the Reasoning agent proposed. Tree-of-Thought beam search explores alternatives when language is ambiguous. The system fails closed — it escalates rather than guessing.
+>
+> Also: hybrid coordination — sequential intake, iterative ToT graph, sequential synthesis. Synthetic data only for privacy.
 
 ---
 
-## Slide 6 — Design Evolution (1 min)
+## 5. Evaluation and results (~1.5 min)
 
-**Timeline:**
-1. Initial concept — problem framing
-2. Retrieval checkpoint — grounding strategy
-3. ToT checkpoint — beam search + critic
-4. Multi-agent checkpoint — six roles
-5. Safety checkpoint — guardrails + escalation
-6. Implementation — LangGraph + CrewAI
+**Slide 6 — Evolution** (brief) · **Slide 8 — Evaluation**
 
-**Say:**  
-"The design evolved across six checkpoints. Each added a testable layer — from concept to retrieval to reasoning to agents to safety to working code — without throwing away prior work."
+**Evolution (30 sec):** Concept → Retrieval → ToT → Multi-agent → Safety → Runnable implementation (31 tests, React UI, Ollama).
+
+**Results bullets:**
+- ✅ 31/31 pytest tests pass
+- ✅ Dry-run E2E completes full pipeline (<10 sec)
+- ✅ Hard gates reject uncited claims
+- ✅ Plan B flood payout: $95K on $150K loss; recommended for flood-zone profile
+- ⚠️ Synthetic data only
+- ⚠️ Live Ollama quick mode ~3–5 min (exceeds 45s design target)
+
+**Say:**
+> I evaluated on three levels. Unit tests: 31 cases pass. Deterministic scenario: Plan B pays $95,000 after sublimit and deductible on a $150,000 flood loss; dry-run recommends Plan B. End-to-end dry-run completes in under ten seconds. Live Ollama works but takes several minutes.
+>
+> Limitations I'll state honestly: synthetic policies only; full grounding-rate automation on a held-out eval set is still in progress.
 
 ---
 
-## Slide 7 — Implementation Demo (1.5 min)
+## 6. Repository and implementation (~1.5 min)
+
+**Slide 7 — Demo** · **Slide 10 — GitHub**
 
 **Show:**
-- GitHub repo URL
+- GitHub README
 - `python main.py --dry-run` terminal output
-- Sample recommendation snippet
+- Recommendation snippet (plan_b, citations)
 
 **Bullets:**
-- Python, LangGraph, CrewAI, Chroma, OpenAI GPT-4o-mini
-- Dry-run mode for demo without API
-- Unit tests for payout, gates, routing
+- Python, LangGraph, Chroma, Ollama/OpenAI
+- `main.py`, `api/`, `frontend/`, `tests/`
+- `docs/README.md` — design checkpoints M1–M6
 
-**Say:**  
-"The implementation is on GitHub at [YOUR URL]. The repo includes a LangGraph workflow, five CrewAI agents, Chroma retrieval, and a dry-run mode that runs the full pipeline without an API key. Here's a sample run comparing two synthetic flood scenarios — Plan B is recommended because it covers flood in the base form without requiring an optional endorsement."
+**Say:**
+> The full implementation is public on GitHub at github.com/cottonandcolor/insurance-policy-agent. Run `python main.py --dry-run` for an instant full-pipeline demo. `pytest tests/ -q` runs 31 tests. Here's a sample run — Plan B is recommended because it covers flood in the base form without requiring an optional endorsement.
+
+**Demo plan:** Use **dry-run** on camera (reliable, <10s). Mention React UI + Ollama live mode as optional.
 
 ---
 
-## Slide 8 — Evaluation Results (1 min)
+## 7. Closing reflection (~45 sec)
 
-**Bullets:**
-- ✅ 6/6 unit tests pass
-- ✅ Dry-run E2E completes full pipeline
-- ✅ Hard gates reject uncited claims
-- ✅ Payout calculator: Plan B flood = $95K on $150K loss
-- ⚠️ Synthetic data only — not yet validated on real carrier forms
+**Slide 9 — Safety** (brief) · **Slide 10 — Conclusion**
 
-**Say:**  
-"Evaluation covers deterministic components and end-to-end workflow. Unit tests verify chunking, payout math, hard gates, and routing. The dry-run demonstrates the full agent loop. The main limitation is that all evaluation uses synthetic policies — production deployment would require validation on public insurance forms and broker review."
+**Safety (15 sec):** Citations required, no purchase APIs, escalate on evidence gap or all branches pruned.
 
----
+**Closing bullets:**
+- Takeaway: grounded multi-agent design beats single-prompt comparison
+- Worked: flood through-line, payout validator, dry-run demo
+- Next: eval automation, faster inference, real-form validation
+- **GitHub:** github.com/cottonandcolor/insurance-policy-agent
 
-## Slide 9 — Safety & Human Oversight (45 sec)
-
-**Bullets:**
-- Guardrails: citations required, no purchase APIs, LLM budget
-- Escalate when: evidence gap, low confidence, all branches pruned
-- Metrics: ≥95% grounding, ≥90% payout accuracy
-
-**Say:**  
-"Safety is built in at every layer. Runtime guardrails block uncited claims and cap compute. The agent escalates to a human when evidence is missing or interpretations diverge by more than twenty-five thousand dollars. This is a decision-support layer with mandatory human review at defined thresholds."
+**Say:**
+> The main takeaway: insurance comparison is a real problem where grounded, multi-step agent design matters more than a clever prompt. What worked well: the flood scenario as a through-line, deterministic payout validation, and dry-run mode for demos. What I'd improve next: automated safety metrics, faster live inference, and validation on public carrier forms.
+>
+> Thank you — code and docs are on GitHub.
 
 ---
 
-## Slide 10 — Conclusion & GitHub (30 sec)
+## Timing summary
 
-**Bullets:**
-- Autonomous grounded insurance comparison agent
-- Multi-agent + ToT + RAG + safety controls
-- **GitHub:** [https://github.com/cottonandcolor/insurance-policy-agent](https://github.com/cottonandcolor/insurance-policy-agent)
-- Questions?
-
-**Say:**  
-"In summary, this capstone delivers an autonomous insurance comparison agent that integrates retrieval, multi-agent collaboration, Tree-of-Thought reasoning, and safety guardrails. The full code and documentation are on GitHub. Thank you."
+| Section | Time |
+|---------|------|
+| 1. Opening | 1:00 |
+| 2. Why it matters | 1:00 |
+| 3. Architecture | 2:00 |
+| 4. Design decisions | 1:30 |
+| 5. Evaluation | 1:30 |
+| 6. Repository + demo | 1:30 |
+| 7. Closing | 0:45 |
+| **Total** | **~9:45** |
 
 ---
 
-## Recording tips
+## Recording checklist
 
-- **Length:** Aim for 8–10 minutes; practice once with a timer
-- **Screen share:** Show GitHub README + one `--dry-run` terminal execution
-- **Audience:** Technical — use terms like RAG, beam search, hard gates
-- **Required:** Clearly state GitHub URL verbally and on screen
-- **Canvas:** Upload video file directly to the assignment
-
-## Checklist before submitting
-
-- [ ] Record presentation video and upload to Canvas
-- [ ] Push repo to public GitHub with README and core files
-- [ ] Record 8–10 min video referencing the repo
-- [ ] Upload FINAL_REPORT (PDF/DOCX or text) to Canvas
-- [ ] Upload presentation video to Canvas
-- [ ] Verify report and presentation align on problem, architecture, and results
+- [ ] GitHub URL on title slide and closing slide
+- [ ] State URL verbally at least once
+- [ ] Screen-share: README + `python main.py --dry-run`
+- [ ] Practice with timer (stay under 10 min)
+- [ ] Upload video to Canvas
+- [ ] Verify alignment with `FINAL_REPORT.md`
