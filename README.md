@@ -75,7 +75,31 @@ Open **http://localhost:5173**
 
 - Check **Dry-run** for instant demo (no Ollama needed)
 - Uncheck dry-run + run Ollama for live local AI
-- Upload `.txt` policy files or use bundled synthetic plans
+- Upload `.txt` policy files, use **public specimen forms** (Travelers HO-3, State Farm, FEMA NFIP), or bundled synthetic plans
+
+**Public specimen policies** (from state regulators + FEMA) live in `data/public/`. See `data/public/SOURCES.md` for URLs and attribution. In the UI, choose **Public HO-3** or **Public flood pair** under Policy Documents.
+
+**Upload your own policies (UI):**
+1. Open the React UI → **Policy Documents**
+2. Pick a preset (synthetic, public HO-3, public flood) or select **Upload my policies**
+3. Optionally download sample `.txt` files (synthetic format, Travelers HO-3, FEMA NFIP)
+4. Click **Analyze Plans**
+
+**Upload via API:**
+```bash
+curl -X POST "http://127.0.0.1:8000/api/analyze?dry_run=true&quick=true" \
+  -F "policies=@/path/to/your_plan.txt" \
+  -F "policies=@/path/to/another_plan.txt" \
+  -F "age=35" -F "location=Cedar Park, TX" -F "flood_zone=true" \
+  -F "home_value=350000" -F "coverage_breadth=0.4" \
+  -F "low_cost=0.3" -F "few_exclusions=0.3"
+```
+
+**CLI with custom files:**
+```bash
+python main.py --dry-run --policies data/synthetic/plan_a.txt data/synthetic/plan_b.txt
+python main.py --policies data/public/travelers_ho3_nv.txt data/public/fema_nfip_dwelling_2021.txt
+```
 
 ---
 
@@ -111,6 +135,7 @@ python -m pytest tests/ -q
 │   ├── crews/               # CrewAI agents (Ollama/OpenAI)
 │   └── tools/               # Retrieval, payout, validators
 ├── data/synthetic/          # Bundled demo policies
+├── data/public/             # Public specimen policies (NV/OK DOI, FEMA NFIP)
 └── tests/
 ```
 

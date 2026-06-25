@@ -29,6 +29,35 @@ def test_models():
     assert "label" in data
 
 
+def test_sample_policy_download():
+    resp = client.get("/api/samples/plan_a.txt")
+    assert resp.status_code == 200
+    assert "SYNTHETIC" in resp.text
+    assert "Flood" in resp.text or "flood" in resp.text.lower()
+
+
+def test_public_sample_policy_download():
+    resp = client.get("/api/samples/travelers_ho3_nv.txt")
+    assert resp.status_code == 200
+    assert "PUBLIC SPECIMEN" in resp.text
+    assert "Travelers" in resp.text
+
+
+def test_analyze_dry_run_public_ho3_preset():
+    resp = client.post(
+        "/api/analyze?dry_run=true&quick=true",
+        data={
+            "policy_preset": "public_ho3",
+            "use_defaults": "false",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["mode"] == "dry_run"
+    assert data["recommendation"]
+    assert data["error"] is None
+
+
 def test_analyze_dry_run_defaults():
     resp = client.post(
         "/api/analyze?dry_run=true&quick=true",

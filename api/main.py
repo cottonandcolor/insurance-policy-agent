@@ -9,6 +9,7 @@ from pathlib import Path
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from src.config import (
     LLM_PROVIDER,
@@ -37,6 +38,26 @@ DEFAULT_POLICIES = [
     str(ROOT / "data" / "synthetic" / "plan_a.txt"),
     str(ROOT / "data" / "synthetic" / "plan_b.txt"),
 ]
+
+PUBLIC_POLICY_PRESETS: dict[str, list[str]] = {
+    "public_ho3": [
+        str(ROOT / "data" / "public" / "travelers_ho3_nv.txt"),
+        str(ROOT / "data" / "public" / "statefarm_hw2136_ok.txt"),
+    ],
+    "public_flood": [
+        str(ROOT / "data" / "public" / "travelers_ho3_nv.txt"),
+        str(ROOT / "data" / "public" / "fema_nfip_dwelling_2021.txt"),
+    ],
+}
+
+SAMPLE_POLICIES: dict[str, Path] = {
+    "plan_a.txt": ROOT / "data" / "synthetic" / "plan_a.txt",
+    "plan_b.txt": ROOT / "data" / "synthetic" / "plan_b.txt",
+    "travelers_ho3_nv.txt": ROOT / "data" / "public" / "travelers_ho3_nv.txt",
+    "statefarm_hw2136_ok.txt": ROOT / "data" / "public" / "statefarm_hw2136_ok.txt",
+    "shelter_ho3_ok.txt": ROOT / "data" / "public" / "shelter_ho3_ok.txt",
+    "fema_nfip_dwelling_2021.txt": ROOT / "data" / "public" / "fema_nfip_dwelling_2021.txt",
+}
 
 
 async def _ollama_reachable() -> bool:
@@ -69,6 +90,15 @@ async def models():
     }
 
 
+@app.get("/api/samples/{filename}")
+async def sample_policy(filename: str):
+    """Download synthetic or public specimen policies."""
+    path = SAMPLE_POLICIES.get(filename)
+    if path is None or not path.is_file():
+        raise HTTPException(status_code=404, detail="Sample not found")
+    return FileResponse(path, media_type="text/plain", filename=filename)
+
+
 @app.post("/api/analyze")
 async def analyze(
     age: int = Form(35),
@@ -80,7 +110,8 @@ async def analyze(
     few_exclusions: float = Form(0.3),
     dry_run: bool = Query(False),
     quick: bool = Query(False),
-    use_defaults: bool = Form(False),
+    use_defaults: bool = Form(True),
+    policy_preset: str = Form("synthetic"),
     policies: list[UploadFile] = File(default=[]),
 ):
     if not dry_run and LLM_PROVIDER == "ollama":
@@ -95,9 +126,7 @@ async def analyze(
     policy_paths: list[str] = []
 
     try:
-        if use_defaults or not policies:
-            policy_paths = DEFAULT_POLICIES.copy()
-        else:
+        if policies:
             if len(policies) > MAX_UPLOAD_FILES:
                 raise HTTPException(
                     status_code=400,
@@ -120,6 +149,15 @@ async def analyze(
                 dest = session_dir / safe_name
                 dest.write_bytes(content)
                 policy_paths.append(str(dest))
+        elif policy_preset in PUBLIC_POLICY_PRESETS:
+            policy_paths = PUBLIC_POLICY_PRESETS[policy_preset].copy()
+        elif use_defaults or policy_preset == "synthetic":
+            policy_paths = DEFAULT_POLICIES.copy()
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Upload .txt policy files or choose a bundled preset.",
+            )
 
         user_messages = build_user_messages(
             age=age,

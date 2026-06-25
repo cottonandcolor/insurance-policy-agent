@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./App.css";
-import { analyzePlans, type AnalyzeResponse, type ProfileInput } from "./api";
+import { analyzePlans, type AnalyzeResponse, type PolicyPreset, type ProfileInput } from "./api";
 import { HealthBanner } from "./components/HealthBanner";
 import { PolicyUpload } from "./components/PolicyUpload";
 import { ProfileForm } from "./components/ProfileForm";
@@ -19,7 +19,7 @@ const defaultProfile: ProfileInput = {
 export default function App() {
   const [profile, setProfile] = useState<ProfileInput>(defaultProfile);
   const [files, setFiles] = useState<File[]>([]);
-  const [useDefaults, setUseDefaults] = useState(true);
+  const [policyPreset, setPolicyPreset] = useState<PolicyPreset>("synthetic");
   const [dryRun, setDryRun] = useState(false);
   const [quick, setQuick] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ export default function App() {
       const response = await analyzePlans(profile, files, {
         dryRun,
         quick,
-        useDefaults,
+        policyPreset,
       });
       setResult(response);
     } catch (e) {
@@ -49,8 +49,8 @@ export default function App() {
       <header>
         <h1>Insurance Policy Comparison Agent</h1>
         <p>
-          Upload synthetic policy documents, compare coverage across loss scenarios, and
-          get a grounded recommendation.
+          Upload <strong>.txt</strong> policy documents (or use bundled demo plans), compare
+          coverage across loss scenarios, and get a grounded recommendation.
         </p>
       </header>
 
@@ -60,9 +60,9 @@ export default function App() {
         <ProfileForm profile={profile} onChange={setProfile} />
         <PolicyUpload
           files={files}
-          useDefaults={useDefaults}
+          policyPreset={policyPreset}
           onFilesChange={setFiles}
-          onUseDefaultsChange={setUseDefaults}
+          onPolicyPresetChange={setPolicyPreset}
         />
       </div>
 
@@ -90,7 +90,7 @@ export default function App() {
           <button
             className="btn-primary"
             onClick={runAnalysis}
-            disabled={loading || (!useDefaults && files.length === 0)}
+            disabled={loading || (policyPreset === "upload" && files.length === 0)}
           >
             {loading ? "Analyzing…" : "Analyze Plans"}
           </button>

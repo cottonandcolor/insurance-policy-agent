@@ -89,6 +89,59 @@ header p {
   display: none;
 }
 
+.dropzone-muted {
+  opacity: 0.75;
+  border-color: #dadce0;
+  background: #f8f9fa;
+  cursor: pointer;
+}
+
+.help-text {
+  font-size: 13px;
+  color: #5f6368;
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
+
+.source-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.source-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.source-option.active {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.source-option input {
+  margin: 0;
+}
+
+.upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.upload-actions a.btn-secondary {
+  text-decoration: none;
+  display: inline-block;
+}
+
 .file-list {
   margin-top: 12px;
   font-size: 13px;

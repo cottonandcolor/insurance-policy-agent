@@ -1,3 +1,5 @@
+export type PolicyPreset = "synthetic" | "public_ho3" | "public_flood" | "upload";
+
 export interface AnalyzeResponse {
   recommendation: string | null;
   winning_branch: {
@@ -39,7 +41,7 @@ export async function fetchHealth(): Promise<HealthResponse> {
 export async function analyzePlans(
   profile: ProfileInput,
   files: File[],
-  options: { dryRun: boolean; quick: boolean; useDefaults: boolean }
+  options: { dryRun: boolean; quick: boolean; policyPreset: PolicyPreset }
 ): Promise<AnalyzeResponse> {
   const form = new FormData();
   form.append("age", String(profile.age));
@@ -49,7 +51,8 @@ export async function analyzePlans(
   form.append("coverage_breadth", String(profile.coverage_breadth));
   form.append("low_cost", String(profile.low_cost));
   form.append("few_exclusions", String(profile.few_exclusions));
-  form.append("use_defaults", String(options.useDefaults));
+  form.append("policy_preset", options.policyPreset);
+  form.append("use_defaults", String(options.policyPreset === "synthetic"));
 
   for (const file of files) {
     form.append("policies", file);
