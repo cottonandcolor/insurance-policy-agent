@@ -17,7 +17,7 @@ Consumers and brokers comparing auto, home, or life insurance face dozens of pla
 | Frontend | React + Vite | Upload policies, profile form, results display |
 | API | FastAPI | File upload, `/api/analyze`, health checks |
 | Orchestrator | LangGraph | State machine, ToT beam loop, budget enforcement |
-| Agents | CrewAI | Profile intake, extraction, reasoning, critic, synthesis |
+| Agents | Role-specific LLM prompts | Intake, extraction, reasoning, critic, synthesis |
 | LLM | **Ollama** (Mistral / Llama) or OpenAI | Local open-source models by default |
 | Retrieval | ChromaDB | Section-aware chunking over policy documents |
 
@@ -25,57 +25,89 @@ Consumers and brokers comparing auto, home, or life insurance face dozens of pla
 
 ## Quick start — React demo
 
+You need **two terminals**: one for the Python API (port 8000), one for the React UI (port 5173).
+
+| Terminal | Directory | What runs |
+|----------|-----------|-----------|
+| 1 | project root (`capstone/`) | FastAPI backend (Python) |
+| 2 | `frontend/` | React dev server (Node.js) |
+
 ### Prerequisites
 
 - Python 3.9+
 - Node.js 18+
-- [Ollama](https://ollama.com) (optional — use dry-run mode without it)
+- [Ollama](https://ollama.com) (optional — use **Dry-run** in the UI without it)
 
-### 1. Backend setup
+### 1. Backend setup (terminal 1 — project root)
 
 ```bash
 git clone https://github.com/cottonandcolor/insurance-policy-agent.git
 cd insurance-policy-agent
 
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 cp .env.example .env
 ```
 
-### 2. Ollama (local open-source models)
+Your prompt should show `(.venv)` before running Python commands.
+
+### 2. Ollama (optional — for live AI, not dry-run)
+
+Install from [ollama.com](https://ollama.com) if `ollama` is not on your PATH. Then:
 
 ```bash
-ollama pull mistral          # or: ollama pull llama3.1:8b
-ollama serve                 # usually runs automatically on Mac
+ollama pull mistral
+# ollama serve   # Mac app often starts this automatically
+curl http://localhost:11434/api/tags   # verify — should return JSON
 ```
 
 Set in `.env`:
 ```
 LLM_PROVIDER=ollama
 OLLAMA_MODEL=mistral
+OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-### 3. Start API
+### 3. Start API (terminal 1 — stay in project root, venv active)
 
 ```bash
+source .venv/bin/activate   # if not already active
 uvicorn api.main:app --reload --port 8000
 ```
 
-### 4. Start React UI
+If `uvicorn: command not found`, use:
+
+```bash
+python -m uvicorn api.main:app --reload --port 8000
+```
+
+Verify (new tab):
+
+```bash
+curl http://localhost:8000/api/health
+```
+
+Expect `"status":"ok"` and `"ollama_reachable":true` when Ollama is running.
+
+**Leave this terminal running.**
+
+### 4. Start React UI (terminal 2 — must be in `frontend/`)
 
 ```bash
 cd frontend
-npm install
+npm install    # first time only
 npm run dev
 ```
 
+Do **not** run `npm run dev` from the project root — `package.json` is inside `frontend/`.
+
 Open **http://localhost:5173**
 
-- Check **Dry-run** for instant demo (no Ollama needed)
-- Uncheck dry-run + run Ollama for live local AI
-- Upload `.txt` policy files, use **public specimen forms** (Travelers HO-3, State Farm, FEMA NFIP), or bundled synthetic plans
+- **Dry-run** checked → instant demo, no LLM (~10 sec)
+- **Dry-run** unchecked + **Quick mode** → live Ollama (~3–5 min)
+- Upload `.txt` policy files, use **public specimen** presets, or bundled synthetic plans
 
 **Public specimen policies** (from state regulators + FEMA) live in `data/public/`. See `data/public/SOURCES.md` for URLs and attribution. In the UI, choose **Public HO-3** or **Public flood pair** under Policy Documents.
 
@@ -103,13 +135,25 @@ python main.py --policies data/public/travelers_ho3_nv.txt data/public/fema_nfip
 
 ---
 
-## CLI (original)
+## CLI (no UI)
+
+From project root with `source .venv/bin/activate`:
 
 ```bash
-python main.py --dry-run
-python main.py                    # uses LLM_PROVIDER from .env
-python -m pytest tests/ -q
+python main.py --dry-run                              # instant, no LLM
+python main.py --beam-width 2 --max-depth 2           # live Ollama (quick)
+python -m pytest tests/ -q                            # 31 tests
 ```
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `uvicorn: command not found` | `source .venv/bin/activate` or `python -m uvicorn api.main:app --reload --port 8000` |
+| `npm` / `package.json` not found | Run `npm run dev` from `frontend/`, not project root |
+| `ollama: command not found` | Install Ollama app, or verify with `curl localhost:11434/api/tags` |
+| API 503 on live analyze | Ollama not running — start Ollama app or check health endpoint |
+| UI can't reach API | Terminal 1 must have uvicorn on port 8000 |
 
 ---
 

@@ -140,7 +140,7 @@ The system integrates **retrieval-augmented generation (RAG)**, **Tree-of-Though
 | **M4: Tree-of-Thought** | Beam search replaced linear reasoning; critic + pruning rubric | Handled ambiguous clause interpretation (flood excluded vs. sublimit) |
 | **M5: Multi-agent** | Six roles; hybrid sequential + graph coordination; Reasoning ↔ Critic loop | Separated extraction from evaluation; reduced self-confirmation bias |
 | **M6: Safety** | Hard gates, evaluation metrics, escalation criteria, fail-closed policy | Made reliability testable and auditable |
-| **M7: Integration** | LangGraph implementation, React/FastAPI demo, Ollama live mode, 31 tests | Delivered a runnable autonomous system, not just a design |
+| **M7: Integration** | LangGraph implementation, React/FastAPI demo, Ollama live mode, 34 tests | Delivered a runnable autonomous system, not just a design |
 
 **Key implementation change:** LLM execution moved from CrewAI to direct Ollama/OpenAI HTTP calls (`src/llm/client.py`) for Python 3.9 compatibility and local demo — agent roles and orchestration unchanged.
 
@@ -163,7 +163,7 @@ The design evolved from a conceptual single-agent assistant to a **grounded, mul
 | Schemas | **Pydantic** (profile, plans, thoughts, critic scores) |
 | Validation | Deterministic payout calculator + hard-gate validators |
 | Config | **python-dotenv** |
-| Testing | **pytest** (31 tests) + `scripts/run_tests.sh`, `scripts/smoke_test_api.sh` |
+| Testing | **pytest** (34 tests) + `scripts/run_tests.sh`, `scripts/smoke_test_api.sh` |
 
 ### Repository structure
 
@@ -197,7 +197,7 @@ pip install -r requirements.txt
 python main.py --dry-run                    # CLI, no LLM required
 uvicorn api.main:app --port 8000            # API backend
 cd frontend && npm install && npm run dev   # UI at localhost:5173
-python -m pytest tests/ -q                  # 31 tests
+python -m pytest tests/ -q                  # 34 tests
 ```
 
 Set `LLM_PROVIDER=ollama` or `openai` in `.env` for live mode.
@@ -219,7 +219,7 @@ Set `LLM_PROVIDER=ollama` or `openai` in `.env` for live mode.
 
 ### Main results
 
-**Unit tests:** **31/31 pytest tests pass** — policy chunking, flood sublimit payout ($95K for Plan B on $150K loss), hard-gate rejection of uncited claims, prune logic, ToT routing, API dry-run, mocked live workflow, and LLM client parsing.
+**Unit tests:** **34/34 pytest tests pass** — policy chunking, flood sublimit payout ($95K for Plan B on $150K loss), hard-gate rejection of uncited claims, prune logic, ToT routing, API dry-run, mocked live workflow, and LLM client parsing.
 
 **Dry-run end-to-end workflow:** Successfully executes full pipeline — intake → index → ingest → ToT beam loop (expand, ground, hard gate, evaluate, prune) → synthesis — producing a cited comparison recommending **plan_b** for a flood-zone profile without optional endorsements.
 
@@ -293,7 +293,7 @@ The system functions as a **decision-support layer**, not a replacement for lice
 
 ### Conclusion
 
-This capstone delivers an autonomous **Insurance Policy Comparison & Recommendation Agent** that addresses a real consumer and broker need — comparing insurance plans by what happens at claim time, not just premium price. The final system integrates retrieval, multi-agent collaboration, Tree-of-Thought reasoning, and safety guardrails into a cohesive LangGraph implementation with a public GitHub repository, React demo UI, and 31 passing tests. Evaluation on synthetic data demonstrates correct payout logic, grounding enforcement, and end-to-end workflow execution.
+This capstone delivers an autonomous **Insurance Policy Comparison & Recommendation Agent** that addresses a real consumer and broker need — comparing insurance plans by what happens at claim time, not just premium price. The final system integrates retrieval, multi-agent collaboration, Tree-of-Thought reasoning, and safety guardrails into a cohesive LangGraph implementation with a public GitHub repository, React demo UI, and 34 passing tests. Evaluation on synthetic data demonstrates correct payout logic, grounding enforcement, and end-to-end workflow execution.
 
 ---
 

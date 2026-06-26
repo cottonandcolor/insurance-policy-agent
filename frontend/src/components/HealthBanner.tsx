@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { fetchHealth, type HealthResponse } from "../api";
 
-export function HealthBanner() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
+export function HealthBanner({ health: healthProp }: { health?: HealthResponse | null }) {
+  const [health, setHealth] = useState<HealthResponse | null>(healthProp ?? null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (healthProp !== undefined) {
+      setHealth(healthProp);
+      return;
+    }
     fetchHealth()
       .then(setHealth)
       .catch(() => setError("Backend API is not running. Start with: uvicorn api.main:app --reload --port 8000"));
-  }, []);
+  }, [healthProp]);
 
   if (error) {
     return <div className="banner error">{error}</div>;

@@ -6,7 +6,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:8000",
+      "/api": {
+        target: "http://localhost:8000",
+        // Live Ollama quick mode can take several minutes end-to-end
+        timeout: 600_000,
+        proxyTimeout: 600_000,
+      },
     },
   },
 });

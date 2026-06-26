@@ -70,7 +70,18 @@ export async function analyzePlans(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(typeof err.detail === "string" ? err.detail : "Analysis failed");
+    const detail = (err as { detail?: unknown }).detail;
+    if (typeof detail === "string") throw new Error(detail);
+    if (Array.isArray(detail)) {
+      throw new Error(
+        detail
+          .map((item) =>
+            typeof item === "object" && item && "msg" in item ? String(item.msg) : String(item)
+          )
+          .join("; ")
+      );
+    }
+    throw new Error(res.statusText || "Analysis failed");
   }
 
   return res.json();

@@ -10,7 +10,7 @@
 
 **Insurance Policy Comparison & Recommendation Agent**
 
-A grounded, multi-agent decision-support system that compares insurance plans by scenario-based payouts and cited policy language — not premium price alone.
+A grounded, multi-agent decision-support system that compares insurance plans from uploaded policy PDFs and documents by scenario-based payouts and cited policy language — not premium price alone.
 
 ---
 

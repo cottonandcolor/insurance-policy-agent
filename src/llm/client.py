@@ -9,7 +9,10 @@ from src.config import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
     OPENAI_API_KEY,
+    OPENAI_BASE_URL,
     OPENAI_MODEL,
+    OPENROUTER_APP_NAME,
+    OPENROUTER_SITE_URL,
 )
 
 
@@ -51,9 +54,12 @@ def _openai_complete(system: str, user: str, temperature: float) -> str:
         "temperature": temperature,
     }
     headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
+    if "openrouter.ai" in OPENAI_BASE_URL:
+        headers["HTTP-Referer"] = OPENROUTER_SITE_URL
+        headers["X-OpenRouter-Title"] = OPENROUTER_APP_NAME
     with httpx.Client(timeout=300.0) as client:
         resp = client.post(
-            "https://api.openai.com/v1/chat/completions",
+            f"{OPENAI_BASE_URL.rstrip('/')}/chat/completions",
             json=payload,
             headers=headers,
         )
