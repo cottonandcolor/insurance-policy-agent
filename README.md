@@ -135,6 +135,51 @@ python main.py --policies data/public/travelers_ho3_nv.txt data/public/fema_nfip
 
 ---
 
+## Jupyter notebook (workflow inspection)
+
+Run the agent **directly in Python** — no FastAPI or React server required. Chunking and Chroma indexing run in-process; only LLM calls go over the network (Ollama or OpenRouter).
+
+**Notebook:** `notebooks/agent_workflow.ipynb`
+
+### Setup (one time)
+
+```bash
+cd ~/capstone          # or your clone path
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # configure LLM_PROVIDER / API keys
+```
+
+Install Jupyter if needed:
+
+```bash
+pip install notebook
+```
+
+### Open and run
+
+```bash
+jupyter notebook notebooks/agent_workflow.ipynb
+```
+
+Or from VS Code / Cursor: open `notebooks/agent_workflow.ipynb` and run cells top to bottom.
+
+### What you get
+
+| Cell | Purpose |
+|------|---------|
+| Setup | Loads `.env`, prints LLM provider and model |
+| LLM ping | Quick connectivity test (few seconds) |
+| Streaming run | Prints each LangGraph step as it completes (`intake` → `index` → `ingest` → ToT → `synthesize`) |
+| Inspect | Session profile, normalized plans, branch scores, winning branch |
+| Recommendation | Final markdown report |
+
+Live inference with **Quick mode** (`beam_width=2`, `max_depth=2`) usually takes **1–5 minutes** depending on provider (OpenRouter often faster than local Ollama).
+
+**Note:** The notebook does **not** call `localhost:8000`. Use the React UI when you want the web demo; use the notebook when you want step-by-step workflow visibility.
+
+---
+
 ## CLI (no UI)
 
 From project root with `source .venv/bin/activate`:
@@ -162,7 +207,7 @@ python -m pytest tests/ -q                            # 31 tests
 | Provider | Env | Notes |
 |---|---|---|
 | **Ollama** (default) | `LLM_PROVIDER=ollama` | Free, local, private — Mistral 7B, Llama 2/3 |
-| **OpenAI** | `LLM_PROVIDER=openai` | Set `OPENAI_API_KEY` |
+| **OpenAI-compatible** | `LLM_PROVIDER=openai` + `OPENAI_BASE_URL` | OpenRouter, Groq, Together — set `OPENAI_API_KEY` and model |
 | **Dry-run** | UI checkbox or `--dry-run` | No LLM; mock responses |
 
 ---
@@ -173,6 +218,8 @@ python -m pytest tests/ -q                            # 31 tests
 ├── api/main.py              # FastAPI backend
 ├── frontend/                # React + Vite UI
 ├── main.py                  # CLI entry point
+├── notebooks/
+│   └── agent_workflow.ipynb # Jupyter: streaming steps + branch inspection
 ├── src/
 │   ├── runner.py            # Shared run_agent()
 │   ├── graph/workflow.py    # LangGraph orchestrator
