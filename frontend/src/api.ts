@@ -1,6 +1,7 @@
 export type PolicyPreset = "synthetic" | "public_ho3" | "public_flood" | "upload";
 
 export interface AnalyzeResponse {
+  thread_id: string | null;
   recommendation: string | null;
   winning_branch: {
     branch_id?: string;
@@ -9,6 +10,8 @@ export interface AnalyzeResponse {
   } | null;
   normalized_plans: unknown[];
   session_profile: Record<string, unknown>;
+  external_enrichment?: Record<string, unknown>;
+  conversation_history?: { role: string; content: string }[];
   llm_call_count: number;
   indexed_chunks?: number;
   mode: string;
@@ -82,6 +85,35 @@ export async function analyzePlans(
       );
     }
     throw new Error(res.statusText || "Analysis failed");
+  }
+
+  return res.json();
+}
+
+export async function followUpAnalysis(
+  threadId: string,
+  message: string,
+  options: { dryRun: boolean; quick: boolean }
+): Promise<AnalyzeResponse> {
+  const form = new FormData();
+  form.append("thread_id", threadId);
+  form.append("message", message);
+
+  const params = new URLSearchParams({
+    dry_run: String(options.dryRun),
+    quick: String(options.quick),
+  });
+
+  const res = await fetch(`/api/follow-up?${params}`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    const detail = (err as { detail?: unknown }).detail;
+    if (typeof detail === "string") throw new Error(detail);
+    throw new Error(res.statusText || "Follow-up failed");
   }
 
   return res.json();

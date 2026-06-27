@@ -130,5 +130,27 @@ def retrieve_evidence(
                 }
             )
 
+    if not chunks:
+        # Fallback when plan_id metadata does not match LLM alias
+        broad = col.query(query_texts=[query], n_results=top_k * 2)
+        if broad["ids"] and broad["ids"][0]:
+            for i, chunk_id in enumerate(broad["ids"][0]):
+                meta = broad["metadatas"][0][i]
+                if meta.get("plan_id") != plan_id:
+                    continue
+                text = broad["documents"][0][i]
+                chunks.append(
+                    {
+                        "chunk_id": chunk_id,
+                        "plan_id": meta["plan_id"],
+                        "section": meta["section"],
+                        "jurisdiction": meta["jurisdiction"],
+                        "text": text,
+                        "peril_tags": meta.get("peril_tags", "").split(","),
+                    }
+                )
+                if len(chunks) >= top_k:
+                    break
+
     cache[key] = chunks
     return chunks

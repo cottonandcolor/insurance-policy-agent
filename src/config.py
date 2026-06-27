@@ -22,6 +22,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 OPENROUTER_SITE_URL = os.getenv("OPENROUTER_SITE_URL", "http://localhost")
 OPENROUTER_APP_NAME = os.getenv("OPENROUTER_APP_NAME", "insurance-policy-agent")
+# Free OpenRouter models can be slow on large critic/synthesis prompts
+LLM_READ_TIMEOUT = float(os.getenv("LLM_READ_TIMEOUT", "600"))
+LLM_CONNECT_TIMEOUT = float(os.getenv("LLM_CONNECT_TIMEOUT", "30"))
+LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "3"))
 
 BEAM_WIDTH = 3
 MAX_DEPTH = 4

@@ -4,8 +4,11 @@ __pycache__/
 .env
 data/chroma/
 data/uploads/
+data/sessions/
 .DS_Store
 *.egg-info/
 .pytest_cache/
 frontend/node_modules/
 frontend/dist/
+e2e/node_modules/
+e2e/test-results/

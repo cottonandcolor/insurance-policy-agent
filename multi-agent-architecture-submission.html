@@ -57,6 +57,11 @@
       text-align: left;
     }
     th { background: #f3f3f3; font-weight: 700; }
+    ul, ol {
+      margin: 0 0 10pt;
+      padding-left: 36pt;
+    }
+    li { margin-bottom: 4pt; }
     .word-count {
       margin-top: 18pt;
       font-style: italic;
@@ -77,73 +82,77 @@
 
   <h2>Problem and Why Multi-Agent</h2>
   <p>My capstone agent helps consumers and brokers compare auto, home, and life insurance plans by analyzing coverage limits, exclusions, deductibles, and realistic out-of-pocket costs across loss scenarios — grounded in actual policy language, not premium rankings alone.</p>
-  <p>A single agent cannot reliably perform this work. Policy comparison spans distinct competencies: structured user interviewing, long-document extraction, semantic retrieval across legal text, multi-path interpretive reasoning, arithmetic scenario modeling, and adversarial quality review. Combining these in one agent increases hallucination risk, blurs accountability for errors, and makes it impossible to enforce grounding gates before recommendations are issued. A multi-agent design separates concerns so each agent has a narrow, testable mandate — similar to how a research workflow benefits from distinct planner, researcher, and writer roles.</p>
+  <p>A single agent cannot reliably perform this work. Policy comparison spans distinct competencies: structured user interviewing, long-document extraction, semantic retrieval across legal text, multi-path interpretive reasoning, arithmetic scenario modeling, and adversarial quality review. Combining these in one agent increases hallucination risk, blurs accountability for errors, and makes it impossible to enforce grounding gates before recommendations are issued. A multi-agent design separates concerns so each agent has a narrow, testable mandate — similar to how a research workflow benefits from distinct planner, researcher, and writer roles working together rather than one generalist.</p>
 
-  <h2>Agent Count and Rationale</h2>
-  <p>The system includes <strong>six agents</strong>, determined by task decomposition rather than arbitrary expansion:</p>
+  <h2>Agent Count, Roles, and Rationale</h2>
+  <p>The system includes <strong>six agents</strong>, determined by task decomposition rather than arbitrary expansion. Each maps to one workflow phase with minimal overlap:</p>
   <table>
     <thead>
-      <tr><th>Agent</th><th>Core responsibility</th></tr>
+      <tr><th>Agent</th><th>Responsibility</th></tr>
     </thead>
     <tbody>
-      <tr><td><strong>Orchestrator</strong></td><td>Workflow routing, phase transitions, beam-search budget enforcement</td></tr>
-      <tr><td><strong>Profile Intake Agent</strong></td><td>Collects user profile, assets, location risks, and priority weights</td></tr>
-      <tr><td><strong>Document &amp; Retrieval Agent</strong></td><td>Ingests policy PDFs, normalizes schema, retrieves grounded evidence</td></tr>
-      <tr><td><strong>Scenario Reasoning Agent</strong></td><td>Generates ToT branches, interprets clauses, computes loss scenarios</td></tr>
-      <tr><td><strong>Policy Critic Agent</strong></td><td>Scores branches, enforces citation/arithmetic gates, prunes weak paths</td></tr>
-      <tr><td><strong>Recommendation Synthesizer</strong></td><td>Produces comparison table, ranked recommendation, and citations</td></tr>
+      <tr><td><strong>Orchestrator</strong></td><td>Routes workflow phases, enforces beam-search budget and depth limits, decides when to loop or terminate</td></tr>
+      <tr><td><strong>Profile Intake Agent</strong></td><td>Collects user profile, assets, location risks, and priority weights into a validated schema</td></tr>
+      <tr><td><strong>Document &amp; Retrieval Agent</strong></td><td>Ingests policy documents, normalizes coverage fields, retrieves grounded evidence for each scenario</td></tr>
+      <tr><td><strong>Scenario Reasoning Agent</strong></td><td>Generates Tree-of-Thought branches, interprets ambiguous clauses, computes loss scenarios</td></tr>
+      <tr><td><strong>Policy Critic Agent</strong></td><td>Scores branches on grounding and arithmetic validity, enforces citation gates, prunes weak paths</td></tr>
+      <tr><td><strong>Recommendation Synthesizer</strong></td><td>Produces comparison table, ranked recommendation, and cited policy excerpts</td></tr>
     </tbody>
   </table>
-  <p>Six agents map to six workflow phases with minimal overlap. Fewer agents would merge extraction with evaluation (self-confirmation bias). More agents — e.g., separate chunking, embedding, and reranking agents — would add coordination overhead without proportional accuracy gains at this design stage.</p>
+  <p>I arrived at six by asking where role separation improves reliability without excessive coordination overhead. Fewer agents would merge extraction with evaluation, reintroducing self-confirmation bias — the same agent that reads a clause would also judge whether it read it correctly. More agents (e.g., separate chunking, embedding, and reranking roles) would add handoff cost without proportional accuracy gains at this stage, reflecting diminishing returns from over-decomposition.</p>
 
   <h2>Coordination Strategy</h2>
-  <p>The architecture uses a <strong>hybrid coordination model</strong>:</p>
-  <p><strong>Sequential (Phases 1–3):</strong> Profile Intake → Document &amp; Retrieval → normalized plan store. This assembly-line flow ensures downstream agents operate on validated, structured inputs.</p>
-  <p><strong>Iterative graph (Phases 4–5):</strong> The Orchestrator runs a beam-search loop: Scenario Reasoning generates branches → Document &amp; Retrieval grounds them → Policy Critic evaluates → Orchestrator prunes or expands. This graph resembles a project network with feedback edges, not a single pass.</p>
-  <p><strong>Sequential (Phase 6):</strong> Recommendation Synthesizer converts the winning branch into user-facing output; Orchestrator handles follow-up re-entry at depth 2 without rebuilding the full tree.</p>
+  <p>Agents are governed by a <strong>hybrid coordination model</strong> that matches where the workflow is deterministic versus where ambiguity requires exploration:</p>
+  <ul>
+    <li><strong>Sequential (Phases 1–3):</strong> Profile Intake → Document &amp; Retrieval → normalized plan store. Like an assembly line, each step must finish before the next begins so downstream agents never operate on raw documents or incomplete profiles.</li>
+    <li><strong>Iterative graph (Phases 4–5):</strong> The Orchestrator runs a beam-search loop: Scenario Reasoning generates branches → Document &amp; Retrieval grounds them with evidence → Policy Critic evaluates → Orchestrator prunes or expands. This resembles a project network with feedback edges — the system revisits interpretations until budget or depth limits are reached.</li>
+    <li><strong>Sequential (Phase 6):</strong> Recommendation Synthesizer converts the winning branch into user-facing output. Follow-up queries re-enter the reasoning graph at a shallow depth without rebuilding the full pipeline.</li>
+  </ul>
+  <p>This hybrid reflects Module 4 concepts (Tree-of-Thought beam search with critic pruning) layered onto Module 5 role separation: sequential coordination where inputs must be validated, graph-based coordination where clause interpretation is genuinely ambiguous.</p>
 
-  <h2>Communication Strategy</h2>
-  <p>Communication is <strong>mixed by phase</strong>:</p>
-  <p><strong>One-way (Orchestrator → workers):</strong> Task assignments, depth-layer prompts, and budget limits flow top-down for efficiency.</p>
-  <p><strong>Two-way (Reasoning ↔ Critic):</strong> The Scenario Reasoning Agent submits candidate thoughts; the Policy Critic returns score vectors and prune/keep decisions. This validation loop prevents unchecked interpretive drift.</p>
-  <p><strong>Shared state (all agents via MCP):</strong> <code>session_profile</code>, <code>branch_store</code>, and <code>retrieval_cache</code> enable agents to read consistent context without passing full document history on every turn.</p>
-  <p>LangChain orchestrates control flow; CrewAI defines agent roles and task routing; MCP maintains branch-aware memory across the ToT loop.</p>
+  <h2>Communication Approach</h2>
+  <p>Communication is <strong>mixed by phase</strong>, chosen for efficiency where inputs are fixed and validation where interpretation is uncertain:</p>
+  <ul>
+    <li><strong>One-way (Orchestrator → workers):</strong> Phase assignments, depth-layer context, and budget limits flow top-down. Workers return structured outputs; they do not route to each other directly, keeping accountability clear.</li>
+    <li><strong>Two-way (Scenario Reasoning ↔ Policy Critic):</strong> Reasoning submits candidate branches with interpretations and scenario claims; the Critic returns score vectors and prune/keep decisions. This validation loop prevents unchecked interpretive drift on high-stakes coverage questions.</li>
+    <li><strong>Shared state (all agents):</strong> Session profile, normalized plans, active reasoning branches, and a retrieval cache let every agent read consistent context without re-passing full document history each turn — supporting Module 3 RAG grounding across the full workflow.</li>
+  </ul>
 
   <h2>Trade-offs</h2>
   <table>
     <thead>
-      <tr><th>Decision</th><th>Benefit</th><th>Cost</th></tr>
+      <tr><th>Decision</th><th>Reliability gain</th><th>Complexity / performance cost</th></tr>
     </thead>
     <tbody>
       <tr>
         <td>Separate Critic Agent</td>
-        <td>Reduces self-confirmation bias; improves grounding enforcement</td>
-        <td>+1 agent, added latency per branch</td>
+        <td>Reduces self-confirmation bias; enforces grounding before synthesis</td>
+        <td>+1 agent; added latency per branch</td>
       </tr>
       <tr>
         <td>Hybrid sequential + graph coordination</td>
-        <td>Reliable preprocessing; flexible reasoning where ambiguity peaks</td>
-        <td>Higher implementation complexity vs. pure pipeline</td>
+        <td>Validated preprocessing; flexible reasoning where ambiguity peaks</td>
+        <td>Higher design and orchestration complexity vs. pure pipeline</td>
       </tr>
       <tr>
-        <td>Two-way Reasoning–Critic loop</td>
-        <td>Catches misread exclusions before recommendation</td>
-        <td>~25 LLM calls and up to 45s per cycle</td>
+        <td>Two-way Reasoning–Critic feedback loop</td>
+        <td>Catches misread exclusions (e.g., flood excluded vs. sublimited)</td>
+        <td>Up to ~25 LLM calls and ~45s latency per cycle</td>
       </tr>
       <tr>
-        <td>MCP shared state</td>
+        <td>Shared state + retrieval cache</td>
         <td>Consistent branch tracking; efficient follow-up re-scoring</td>
-        <td>State synchronization risk if schemas drift</td>
+        <td>State synchronization risk if schemas drift across agents</td>
       </tr>
     </tbody>
   </table>
-  <p>Feedback loops improve reliability at the cost of latency — acceptable for high-stakes financial recommendations where incorrect coverage advice outweighs wait time.</p>
+  <p>For high-stakes financial recommendations, feedback loops and critic separation improve reliability at the cost of latency — incorrect coverage advice is far more costly than a longer wait. Module 6 safety concepts (hard gates, fail-closed escalation) further reinforce this reliability-first trade-off.</p>
 
-  <h2>Scalability</h2>
-  <p>The architecture scales horizontally by design. The Document &amp; Retrieval Agent parallelizes per-plan ingestion; retrieval cache deduplicates sibling branch queries. The Orchestrator caps beam width (3) and depth (4), preventing combinatorial explosion as plan count grows. MCP session updates trigger partial ToT re-entry at depth 2 for follow-up queries, not full pipeline restarts. New insurance types can be added via the normalized schema without redesigning the Critic or Synthesizer.</p>
-  <p>Each agent is independently testable — extraction accuracy, retrieval precision, pruning recall, and synthesis citation rate — making the system evolvable across later implementation modules without architectural rework.</p>
+  <h2>Scalability and Effective Problem Solving</h2>
+  <p>The architecture scales by bounding combinatorial growth and reusing prior work. The Orchestrator caps beam width (3) and search depth (4), preventing explosion as plan count grows. The Document &amp; Retrieval Agent parallelizes per-plan ingestion; the retrieval cache deduplicates sibling branch queries within a session. Follow-up questions re-enter the reasoning graph at shallow depth rather than restarting intake and ingestion. New insurance types extend through the normalized schema without redesigning the Critic or Synthesizer.</p>
+  <p>Each agent is independently testable — extraction accuracy, retrieval precision, pruning recall, and synthesis citation rate — so the system can evolve across later modules without architectural rework. Role separation, grounded retrieval, iterative reasoning with critic pruning, and bounded search together support effective problem solving: the system explores multiple interpretive paths where policy language is ambiguous, validates each path before recommending, and stays within predictable latency and cost envelopes.</p>
 
-  <p class="word-count">Word count: ~560</p>
+  <p class="word-count">Word count: ~680</p>
 
 </div>
 </body>

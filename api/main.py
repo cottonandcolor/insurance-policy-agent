@@ -22,7 +22,8 @@ from src.config import (
     UPLOAD_DIR,
     get_llm_mode_label,
 )
-from src.runner import build_user_messages, format_response, run_agent
+from src.runner import build_user_messages, format_response, run_agent, run_follow_up
+from src.llm.client import LLMRequestError
 
 app = FastAPI(title="Insurance Policy Comparison Agent")
 
@@ -172,15 +173,61 @@ async def analyze(
         beam_width = 2 if quick else 3
         max_depth = 2 if quick else 4
 
-        result = run_agent(
-            policy_paths=policy_paths,
-            user_messages=user_messages,
-            dry_run=dry_run,
-            beam_width=beam_width,
-            max_depth=max_depth,
-        )
+        try:
+            result = run_agent(
+                policy_paths=policy_paths,
+                user_messages=user_messages,
+                dry_run=dry_run,
+                beam_width=beam_width,
+                max_depth=max_depth,
+            )
+        except LLMRequestError as exc:
+            status = 503 if exc.status_code == 429 else 502
+            raise HTTPException(status_code=status, detail=str(exc)) from exc
+        except httpx.TimeoutException as exc:
+            raise HTTPException(
+                status_code=504,
+                detail="LLM request timed out. Try Quick mode or retry in a minute.",
+            ) from exc
         return format_response(result)
 
     finally:
         if session_dir.exists():
             shutil.rmtree(session_dir, ignore_errors=True)
+
+
+@app.post("/api/follow-up")
+async def follow_up(
+    thread_id: str = Form(...),
+    message: str = Form(...),
+    dry_run: bool = Query(False),
+    quick: bool = Query(True),
+):
+    if not message.strip():
+        raise HTTPException(status_code=400, detail="Message is required.")
+
+    if not dry_run and LLM_PROVIDER == "ollama":
+        if not await _ollama_reachable():
+            raise HTTPException(
+                status_code=503,
+                detail="Ollama is not running. Start with: ollama serve",
+            )
+
+    try:
+        result = run_follow_up(
+            thread_id,
+            message.strip(),
+            dry_run=dry_run,
+            quick=quick,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LLMRequestError as exc:
+        status = 503 if exc.status_code == 429 else 502
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
+    except httpx.TimeoutException as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="LLM request timed out. Try Quick mode or retry in a minute.",
+        ) from exc
+    return format_response(result)

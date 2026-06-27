@@ -47,3 +47,33 @@ test.describe("Insurance Policy Comparison UI", () => {
     await expect(page.getByTestId("analyze-button")).toBeDisabled();
   });
 });
+
+test.describe("Live LLM (OpenRouter / Ollama)", () => {
+  test.skip(!process.env.LIVE_E2E, "Set LIVE_E2E=1 to run live LLM UI tests");
+
+  test("live quick mode on synthetic preset shows recommendation", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto("/");
+    await page.getByTestId("dry-run-checkbox").uncheck();
+    await page.getByTestId("quick-mode-checkbox").check();
+    await page.getByTestId("analyze-button").click();
+
+    const results = page.getByTestId("results-section");
+    await expect(results).toBeVisible({ timeout: 150_000 });
+    await expect(results.getByRole("heading", { name: "Recommendation" })).toBeVisible();
+    await expect(results.locator(".badge")).not.toContainText("dry_run");
+  });
+
+  test("live public flood preset completes in UI", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto("/");
+    await page.getByRole("radio", { name: /Public flood pair/i }).check();
+    await page.getByTestId("dry-run-checkbox").uncheck();
+    await page.getByTestId("quick-mode-checkbox").check();
+    await page.getByTestId("analyze-button").click();
+
+    const results = page.getByTestId("results-section");
+    await expect(results).toBeVisible({ timeout: 150_000 });
+    await expect(results.locator(".badge")).not.toContainText("dry_run");
+  });
+});

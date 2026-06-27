@@ -53,10 +53,13 @@ def test_format_response_shape(policy_paths):
     )
     payload = format_response(result)
     assert set(payload.keys()) == {
+        "thread_id",
         "recommendation",
         "winning_branch",
         "normalized_plans",
         "session_profile",
+        "external_enrichment",
+        "conversation_history",
         "llm_call_count",
         "indexed_chunks",
         "mode",

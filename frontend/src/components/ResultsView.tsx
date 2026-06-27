@@ -27,7 +27,16 @@ export function ResultsView({ result }: Props) {
         {result.winning_branch?.branch_id && (
           <span>Branch: {result.winning_branch.branch_id}</span>
         )}
+        {result.thread_id && <span>Session: {result.thread_id}</span>}
       </div>
+      {result.external_enrichment?.flood_zone_code && (
+        <p className="help-text">
+          FEMA NFHL zone: <strong>{String(result.external_enrichment.flood_zone_code)}</strong>
+          {result.external_enrichment.flood_zone_subtype
+            ? ` (${String(result.external_enrichment.flood_zone_subtype)})`
+            : ""}
+        </p>
+      )}
       <div className="markdown-body">
         <ReactMarkdown>{result.recommendation || "No recommendation generated."}</ReactMarkdown>
       </div>

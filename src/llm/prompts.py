@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+from src.tools.policy_text import excerpt_for_ingest
+
 
 def intake_prompt(user_messages: list[str]) -> tuple[str, str]:
     system = (
@@ -29,13 +31,15 @@ def ingest_prompt(policy_text: str, plan_id: str) -> tuple[str, str]:
         f"Normalize plan_id={plan_id}. Return JSON with: plan_id, carrier, "
         "dwelling_limit, deductible, perils (map of peril -> {value, section}), "
         "exclusions (list of {value, section}), riders (list of {value, section}).\n\n"
-        f"Policy:\n{policy_text[:10000]}\n\n"
-        "Return a single JSON object only."
+        f"Policy:\n{excerpt_for_ingest(policy_text)}\n\n"
+        "Include perils.flood (or note exclusion). Return a single JSON object only."
     )
     return system, user
 
 
 def reasoning_prompt(context: dict, depth: int) -> tuple[str, str]:
+    plans = context.get("plans") or []
+    plan_ids = [p.get("plan_id") for p in plans if p.get("plan_id")]
     system = (
         "You are a Scenario Reasoning Analyst. Generate alternative interpretation branches "
         "with flood scenario thoughts using evidence only. Output ONLY valid JSON."
@@ -43,6 +47,10 @@ def reasoning_prompt(context: dict, depth: int) -> tuple[str, str]:
     user = (
         f"Depth {depth}. Return JSON array (max 3 items). Each item: "
         "{interpretation, thoughts:[{plan_id, scenario_id, claim, evidence_ids, payout, deductible_applied}]}.\n\n"
+        f"IMPORTANT: use these exact plan_id values in every thought: {plan_ids}. "
+        "Do NOT use plan_a or plan_b unless those are the actual plan_id values.\n"
+        "Set scenario_id to 'flood'. Leave evidence_ids as [] — retrieval will fill them.\n"
+        "Set payout and deductible_applied from normalized plan peril data.\n\n"
         f"Context:\n{json.dumps(context, default=str)[:8000]}\n\n"
         "Return a JSON array of branch proposals only."
     )
@@ -69,7 +77,9 @@ def critic_prompt(branches: list[dict], profile: dict) -> tuple[str, str]:
         "arithmetic_validity, priority_alignment}, composite_score, prune, rationale}.\n\n"
         f"Profile:\n{json.dumps(profile)}\n\n"
         f"Branches:\n{json.dumps(branch_summaries, default=str)[:8000]}\n\n"
-        "Use the exact branch_id values provided. Return a JSON array of evaluations only."
+        "Evaluate EVERY branch listed. Use the exact branch_id values provided. "
+        "composite_score should be 0.55–0.95 for grounded branches. "
+        "Return a JSON array of evaluations only."
     )
     return system, user
 

@@ -28,10 +28,20 @@ class Branch(TypedDict, total=False):
     rationale: str
 
 
+class ConversationTurn(TypedDict, total=False):
+    role: str
+    content: str
+
+
 class AgentState(TypedDict, total=False):
     dry_run: bool
+    thread_id: str
+    follow_up_mode: bool
     user_messages: List[str]
+    conversation_history: List[ConversationTurn]
+    session_summary: str
     session_profile: Dict[str, Any]
+    external_enrichment: Dict[str, Any]
     policy_paths: List[str]
     normalized_plans: List[Dict[str, Any]]
     retrieval_cache: Dict[str, List[Dict[str, Any]]]

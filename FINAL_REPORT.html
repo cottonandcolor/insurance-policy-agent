@@ -100,7 +100,10 @@ Shared State: session_profile, branch_store, retrieval_cache</pre>
     <tr><td>LLM</td><td>OpenAI GPT-4o-mini</td></tr>
     <tr><td>Retrieval</td><td>ChromaDB + section-aware chunking</td></tr>
     <tr><td>Validation</td><td>Pydantic schemas, payout calculator, hard gates</td></tr>
-    <tr><td>Testing</td><td>pytest (6 tests); dry-run E2E without API key</td></tr>
+    <tr><td>API / UI</td><td>FastAPI + React; <code>/api/follow-up</code> for multi-turn sessions</td></tr>
+    <tr><td>Memory</td><td>LangGraph MemorySaver + session JSON store (<code>data/sessions/</code>)</td></tr>
+    <tr><td>Enrichment</td><td>Census Geocoder + FEMA NFHL REST (<code>src/tools/location_enrichment.py</code>)</td></tr>
+    <tr><td>Testing</td><td>pytest (41 tests); dry-run E2E without API key</td></tr>
   </tbody>
 </table>
 <p><strong>Run:</strong> <code>python main.py --dry-run</code> (no API) &nbsp;|&nbsp; <code>python main.py</code> (live) &nbsp;|&nbsp; <code>python -m pytest tests/ -q</code></p>
@@ -129,16 +132,40 @@ Shared State: session_profile, branch_store, retrieval_cache</pre>
   <li>No production user study or broker validation yet</li>
 </ul>
 
-<h2>8. Safety, Reliability, and Human Oversight</h2>
+<h2>8. External APIs and Session Memory</h2>
+<h3>External APIs (enrichment layer)</h3>
+<p>The agent integrates public APIs to enrich the user profile without replacing policy-grounded reasoning. Coverage claims still require uploaded policy text and Chroma retrieval.</p>
+<table>
+  <thead><tr><th>API</th><th>Purpose</th><th>Integration</th></tr></thead>
+  <tbody>
+    <tr><td>US Census Geocoder</td><td>Convert location text to lat/lon</td><td><code>enrich</code> node after intake (<code>src/tools/location_enrichment.py</code>)</td></tr>
+    <tr><td>FEMA NFHL ArcGIS REST</td><td>Official flood zone code (AE, X, etc.) for coordinates</td><td>Same enrichment node; stores <code>flood_zone_code</code> in <code>session_profile</code></td></tr>
+    <tr><td>OpenFEMA (optional)</td><td>NFIP community/program context</td><td>Future work — cited in design for broker-facing context</td></tr>
+  </tbody>
+</table>
+<p>Enrichment is fail-open: if an API is unreachable, the workflow continues using form inputs. When NFHL responds, the UI displays the inferred zone on the results panel.</p>
+
+<h3>Session memory (multi-turn interactivity)</h3>
+<p>Interactivity is implemented with <strong>structured state</strong>, not raw chat history alone:</p>
+<ul>
+  <li><strong>LangGraph checkpointer</strong> (<code>MemorySaver</code>) — thread-scoped graph state via <code>thread_id</code></li>
+  <li><strong>Session store</strong> (<code>data/sessions/</code>) — persists <code>normalized_plans</code>, <code>retrieval_cache</code>, <code>conversation_history</code>, and run settings between API calls</li>
+  <li><strong>Follow-up routing</strong> — <code>POST /api/follow-up</code> re-enters the workflow at <code>tot_init</code> with <code>start_depth=2</code>, skipping re-index and re-ingest when plans are cached</li>
+  <li><strong>Conversation trim</strong> — last 8 turns kept to avoid context overflow; assistant summaries stored after synthesis</li>
+</ul>
+<pre>First analyze:  intake → enrich → index → ingest → ToT loop → synthesize  →  thread_id
+Follow-up:      intake → enrich → tot_init → ToT loop → synthesize  (reuse normalized_plans)</pre>
+
+<h2>9. Safety, Reliability, and Human Oversight</h2>
 <p><strong>Guardrails:</strong> Synthetic data only; citation-required grounding; arithmetic validator; no purchase APIs; LLM budget; separate Critic; output disclaimer; block output if all branches fail.</p>
 <p><strong>Human intervention when:</strong> Evidence gap after expanded retrieval; low confidence with tied scores; all branches pruned; payout divergence &gt;$25K; user corrects misread term; out-of-scope request (binding quote, purchase, claims).</p>
 <pre>Input validation → Grounded retrieval → ToT + Critic → Hard gates → Metrics check → Output OR escalate</pre>
 
-<h2>9. Conclusion</h2>
+<h2>10. Conclusion</h2>
 <p>This capstone delivers an autonomous insurance comparison agent that integrates retrieval, multi-agent collaboration, Tree-of-Thought reasoning, and safety guardrails into a cohesive LangGraph + CrewAI implementation — addressing a real consumer and broker need with testable, auditable controls.</p>
 
 <hr>
-<h2>10. References</h2>
+<h2>11. References</h2>
 <ul>
   <li><strong>GitHub Repository:</strong> <a href="https://github.com/cottonandcolor/insurance-policy-agent">https://github.com/cottonandcolor/insurance-policy-agent</a></li>
   <li><strong>Presentation Video:</strong> Submitted separately in Canvas (8–10 minutes)</li>

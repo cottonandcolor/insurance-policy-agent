@@ -7,6 +7,13 @@ from typing import Literal
 from src.state import AgentState
 
 
+def route_after_enrich(state: AgentState) -> Literal["index", "tot_init"]:
+    """Skip re-indexing when follow-up reuses normalized plans from session memory."""
+    if state.get("follow_up_mode") and state.get("normalized_plans"):
+        return "tot_init"
+    return "index"
+
+
 def should_continue_tot(state: AgentState) -> Literal["expand", "synthesize"]:
     if state.get("error"):
         return "synthesize"

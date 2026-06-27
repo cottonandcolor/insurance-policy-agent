@@ -19,15 +19,19 @@
     .slide.title-slide p { font-size: 18pt; opacity: 0.9; margin-bottom: 8px; }
     .slide.title-slide .meta { font-size: 14pt; margin-top: 32px; opacity: 0.8; }
     h2 { font-size: 28pt; font-weight: 500; margin-bottom: 24px; color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 8px; }
+    h3 { font-size: 16pt; font-weight: 500; margin: 16px 0 8px; color: #174ea6; }
     ul { list-style: none; padding: 0; }
+    ul.compact li { font-size: 14pt; margin-bottom: 8px; }
     ul li { font-size: 18pt; margin-bottom: 14px; padding-left: 28px; position: relative; line-height: 1.4; }
     ul li::before { content: "•"; color: #1a73e8; font-weight: bold; position: absolute; left: 0; }
     table { width: 100%; border-collapse: collapse; font-size: 14pt; margin-top: 12px; }
+    table.compact { font-size: 11.5pt; margin-top: 8px; }
+    table.compact th, table.compact td { padding: 7px 10px; vertical-align: top; }
     th, td { border: 1px solid #dadce0; padding: 10px 14px; text-align: left; }
     th { background: #e8f0fe; color: #174ea6; }
     pre { background: #f8f9fa; border: 1px solid #dadce0; padding: 16px 20px; font-size: 13pt; font-family: "Courier New", monospace; margin: 16px 0; border-radius: 4px; line-height: 1.5; }
-    .speaker { background: #fef7e0; border-left: 4px solid #f9ab00; padding: 14px 18px; margin-top: 20px; font-size: 13pt; color: #3c4043; line-height: 1.5; }
-    .speaker strong { color: #e37400; }
+    pre.arch { font-size: 10.5pt; line-height: 1.35; padding: 14px 16px; margin: 10px 0; white-space: pre; }
+    .slide.dense { padding: 32px 48px; justify-content: flex-start; overflow-y: auto; }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
     .badge { display: inline-block; background: #e8f0fe; color: #174ea6; padding: 4px 12px; border-radius: 4px; font-size: 12pt; margin-right: 8px; margin-bottom: 8px; }
     .github { font-size: 16pt; color: #1a73e8; word-break: break-all; margin-top: 12px; }
@@ -61,7 +65,6 @@
       <li>Example: flood zone — Plan A excludes flood; Plan B covers with $100K sublimit</li>
       <li><strong>Users:</strong> consumers comparing household coverage; brokers evaluating client options</li>
     </ul>
-    <div class="speaker"><strong>Say (~1 min):</strong> "Choosing the wrong plan can leave a household exposed to tens of thousands in out-of-pocket loss. My agent targets users who need scenario-based comparison grounded in actual policy language."</div>
   </div>
 
   <!-- SLIDE 3 -->
@@ -73,30 +76,110 @@
       <li><strong>Scope:</strong> advisory decision support — no binding quotes or purchases</li>
       <li><strong>Data:</strong> synthetic/public/anonymized policies only</li>
     </ul>
-    <div class="speaker"><strong>Say (~45 sec):</strong> "The agent autonomously collects requirements, analyzes plans across loss scenarios, and recommends the best fit with citations — not a replacement for licensed advice."</div>
   </div>
 
   <!-- SLIDE 4 -->
-  <div class="slide" data-n="4">
-    <h2>Architecture Overview</h2>
-    <pre>Profile Intake → Index &amp; Normalize → ToT Beam Loop → Synthesize
-                      ↑                    ↓
-                 Chroma RAG         Critic + Hard Gates
-          ─────────────────────────────────────────
-          LangGraph Orchestrator + Shared State
-          CLI · FastAPI · React UI</pre>
+  <div class="slide dense" data-n="4">
+    <h2>Architecture — LangGraph Workflow</h2>
+    <pre class="arch">┌──────────────────────── LANGGRAPH ORCHESTRATOR (src/graph/workflow.py) ────────────────────────┐
+│                                                                                                 │
+│  PHASE 1   intake          Profile Intake Agent  →  session_profile (age, flood zone, weights) │
+│       ↓                                                                                         │
+│  PHASE 2   index           Section chunking  →  ChromaDB vector index (per plan_id, section)   │
+│       ↓                                                                                         │
+│  PHASE 3   ingest          Document & Retrieval Agent  →  normalized_plans (Pydantic schema)   │
+│       ↓                                                                                         │
+│  PHASE 4–5  ToT BEAM LOOP (depth 1–4, beam_width 2–3)  ←── Orchestrator conditional routing    │
+│       tot_expand    Scenario Reasoning Agent  →  interpretation branches (flood scenarios)     │
+│       ground        Chroma RAG retrieve + deterministic payout calculator                      │
+│       hard_gate     Validators — require chunk IDs + arithmetic match                           │
+│       evaluate      Policy Critic Agent  →  composite_score, prune recommendation              │
+│       prune_beam    Keep top beam_width survivors                                              │
+│       advance_depth depth++  →  loop back to tot_expand OR exit to synthesize                  │
+│       ↓                                                                                         │
+│  PHASE 6   synthesize      Recommendation Synthesizer  →  final_recommendation (markdown)      │
+│                                                                                                 │
+│  SHARED STATE: session_profile · active_branches · retrieval_cache · llm_call_count            │
+│  INTERFACES: main.py (CLI) · api/main.py (FastAPI) · frontend/ (React + Vite)                  │
+│  LLM: Ollama (Mistral) or OpenAI  —  src/llm/client.py + role prompts in src/llm/prompts.py    │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘</pre>
     <div>
-      <span class="badge">LangGraph</span>
-      <span class="badge">6 agent roles</span>
+      <span class="badge">LangGraph StateGraph</span>
       <span class="badge">Chroma RAG</span>
       <span class="badge">ToT beam search</span>
-      <span class="badge">Ollama / OpenAI</span>
+      <span class="badge">Hard gates</span>
+      <span class="badge">Pydantic schemas</span>
     </div>
-    <div class="speaker"><strong>Say (~1.5 min):</strong> "LangGraph orchestrates the workflow. Six specialist roles handle intake, retrieval, reasoning, criticism, and synthesis. Chroma provides grounded retrieval. The ToT loop explores multiple interpretations — like whether flood is covered — before recommending."</div>
   </div>
 
   <!-- SLIDE 5 -->
-  <div class="slide" data-n="5">
+  <div class="slide dense" data-n="5">
+    <h2>Six Agent Roles</h2>
+    <table class="compact">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Role</th>
+          <th>Responsibility</th>
+          <th>LangGraph node(s)</th>
+          <th>Output</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>Orchestrator</strong></td>
+          <td>Phase routing, ToT loop control, beam/depth limits, LLM budget (≤25 calls)</td>
+          <td>tot_init · advance_depth · conditional edges</td>
+          <td>Workflow state, loop exit</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>Profile Intake</strong></td>
+          <td>Parse user requirements — location, flood zone, home value, priority weights</td>
+          <td>intake</td>
+          <td>session_profile</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>Document &amp; Retrieval</strong></td>
+          <td>Chunk policies by section, index in Chroma, normalize plans, attach evidence at query time</td>
+          <td>index · ingest · ground</td>
+          <td>normalized_plans · chunk IDs</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>Scenario Reasoning</strong></td>
+          <td>Generate ToT branches — e.g. flood excluded vs sublimited, $150K loss scenarios</td>
+          <td>tot_expand</td>
+          <td>active_branches + thoughts</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>Policy Critic</strong></td>
+          <td>Adversarial scoring — grounding, consistency, payout validity; recommends prune</td>
+          <td>evaluate (+ hard_gate validators)</td>
+          <td>composite_score · prune flag</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><strong>Recommendation Synthesizer</strong></td>
+          <td>Build cited comparison table and advisory recommendation from winning branch</td>
+          <td>synthesize</td>
+          <td>final_recommendation</td>
+        </tr>
+      </tbody>
+    </table>
+    <h3>Why separate roles?</h3>
+    <ul class="compact">
+      <li>Reasoning and criticism use <strong>different prompts</strong> — reduces self-confirmation bias</li>
+      <li>Retrieval and validation run <strong>between</strong> reasoning steps — citations required before scoring</li>
+      <li>Hybrid coordination: sequential intake → iterative ToT graph → sequential synthesis</li>
+    </ul>
+  </div>
+
+  <!-- SLIDE 6 -->
+  <div class="slide" data-n="6">
     <h2>Key Design Decisions</h2>
     <table>
       <thead><tr><th>Decision</th><th>Why</th></tr></thead>
@@ -107,11 +190,10 @@
         <tr><td>Fail-closed safety</td><td>Escalate to human when evidence is missing</td></tr>
       </tbody>
     </table>
-    <div class="speaker"><strong>Say (~1.5 min):</strong> "Every claim must cite a policy chunk. A separate Critic agent prevents self-confirmation bias. The system fails closed — it escalates rather than guessing."</div>
   </div>
 
-  <!-- SLIDE 6 -->
-  <div class="slide" data-n="6">
+  <!-- SLIDE 7 -->
+  <div class="slide" data-n="7">
     <h2>Design Evolution</h2>
     <table>
       <thead><tr><th>Checkpoint</th><th>Refinement</th></tr></thead>
@@ -124,52 +206,114 @@
         <tr><td>Integration</td><td>LangGraph + React UI + Ollama + 34 tests</td></tr>
       </tbody>
     </table>
-    <div class="speaker"><strong>Say (~1 min):</strong> "Each checkpoint added a testable layer — from concept to retrieval to reasoning to agents to safety to working code."</div>
-  </div>
-
-  <!-- SLIDE 7 -->
-  <div class="slide" data-n="7">
-    <h2>Implementation Demo</h2>
-    <div class="two-col">
-      <div>
-        <ul>
-          <li>Python · LangGraph · ChromaDB</li>
-          <li>Ollama (Mistral) or OpenAI</li>
-          <li>FastAPI + React demo UI</li>
-          <li><code>python main.py --dry-run</code></li>
-        </ul>
-      </div>
-      <div>
-        <pre>$ python main.py --dry-run
-
-Recommended: plan_b
-Scenario: $150K flood loss
-Plan B payout: $95,000
-Citations: plan_b:1, plan_a:2</pre>
-      </div>
-    </div>
-    <p class="github"><strong>GitHub:</strong> https://github.com/cottonandcolor/insurance-policy-agent</p>
-    <div class="speaker"><strong>Say (~1.5 min):</strong> "The repo includes a full LangGraph workflow with dry-run mode. For a flood-zone profile, Plan B is recommended because it covers flood in the base form. Code is on GitHub at the URL shown."</div>
   </div>
 
   <!-- SLIDE 8 -->
-  <div class="slide" data-n="8">
-    <h2>Evaluation Results</h2>
-    <table>
-      <thead><tr><th>Metric</th><th>Target</th><th>Result</th></tr></thead>
-      <tbody>
-        <tr><td>Unit tests</td><td>100%</td><td class="check">34/34 pass</td></tr>
-        <tr><td>Dry-run E2E</td><td>Completes</td><td class="check">Full pipeline OK</td></tr>
-        <tr><td>Payout accuracy</td><td>≥90%</td><td class="check">Plan B: $95K verified</td></tr>
-        <tr><td>Grounding rate</td><td>≥95%</td><td class="check">Hard gates enforce citations</td></tr>
-        <tr><td>Real carrier forms</td><td>Benchmark</td><td class="warn">Not yet — synthetic only</td></tr>
-      </tbody>
-    </table>
-    <div class="speaker"><strong>Say (~1 min):</strong> "Thirty-one unit tests pass. Dry-run demonstrates the full agent loop in under ten seconds. Live Ollama works but takes several minutes. Main limitation: synthetic policies only."</div>
+  <div class="slide dense" data-n="8">
+    <h2>Live Demo — Run Instructions</h2>
+    <div class="two-col">
+      <div>
+        <h3>CLI (Ollama live)</h3>
+        <pre class="arch">cd capstone
+source .venv/bin/activate
+# Ollama running: curl localhost:11434/api/tags
+
+python main.py --beam-width 2 --max-depth 2
+
+# No --dry-run → calls Mistral via Ollama
+# ~3–5 min · expect mode: ollama/mistral</pre>
+        <h3>React UI (two terminals)</h3>
+        <ul class="compact">
+          <li><strong>T1:</strong> <code>uvicorn api.main:app --port 8000</code></li>
+          <li><strong>T2:</strong> <code>cd frontend && npm run dev</code></li>
+          <li>Open <strong>localhost:5173</strong></li>
+          <li><strong>Uncheck</strong> Dry-run · <strong>Check</strong> Quick mode</li>
+          <li>Policy: Bundled demo or upload <code>demo-uploads/</code></li>
+          <li>Click <strong>Analyze Plans</strong></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Verify before live run</h3>
+        <pre class="arch">curl localhost:8000/api/health
+
+# expect:
+# "ollama_reachable": true
+# "configured_model": "ollama/mistral"</pre>
+        <h3>Sample live output</h3>
+        <pre class="arch">Mode: ollama/mistral
+LLM calls: ~8–10 (quick mode)
+
+# Markdown comparison table
+# Flood coverage: Plan A vs Plan B
+# Advisory recommendation + tradeoffs
+# (not a binding quote)</pre>
+        <p class="github"><strong>GitHub:</strong> github.com/cottonandcolor/insurance-policy-agent</p>
+      </div>
+    </div>
   </div>
 
   <!-- SLIDE 9 -->
-  <div class="slide" data-n="9">
+  <div class="slide dense" data-n="9">
+    <h2>End-to-End Run — OpenRouter + Client → Server Flow</h2>
+    <div class="two-col">
+      <div>
+        <h3>Setup &amp; run (all steps)</h3>
+        <pre class="arch">1. git clone …/insurance-policy-agent && cd capstone
+2. python -m venv .venv && source .venv/bin/activate
+3. pip install -r requirements.txt
+4. cp .env.example .env  →  configure OpenRouter:
+
+   LLM_PROVIDER=openai
+   OPENAI_API_KEY=sk-or-your-openrouter-key
+   OPENAI_BASE_URL=https://openrouter.ai/api/v1
+   OPENAI_MODEL=meta-llama/llama-3.3-70b-instruct:free
+
+5. Terminal 1 (project root):
+   uvicorn api.main:app --reload --port 8000
+
+6. Terminal 2:
+   cd frontend && npm install && npm run dev
+
+7. Browser: http://localhost:5173
+   · Uncheck Dry-run · Check Quick mode
+   · Choose policies → Analyze Plans</pre>
+      </div>
+      <div>
+        <h3>Client ↔ server ↔ agent (produces result)</h3>
+        <pre class="arch">┌─────────────── REACT CLIENT (:5173) ───────────────┐
+│ ProfileForm + PolicyUpload + Analyze button          │
+│ fetch("/api/health")  →  health banner               │
+│ POST /api/analyze?dry_run=false&quick=true           │
+│   multipart: profile fields + policy .txt files      │
+└────────────────────────┬─────────────────────────────┘
+                         │ Vite proxy /api → :8000
+┌────────────────────────▼─────────────────────────────┐
+│ FASTAPI  api/main.py  (:8000)                        │
+│ validate upload → run_agent(policy_paths, profile)    │
+└────────────────────────┬─────────────────────────────┘
+                         │
+┌────────────────────────▼─────────────────────────────┐
+│ LANGGRAPH  src/graph/workflow.py                     │
+│ intake → index (Chroma) → ingest → ToT loop → synth  │
+│   each LLM step → src/llm/client.py                  │
+└────────────────────────┬─────────────────────────────┘
+                         │ HTTPS chat/completions
+┌────────────────────────▼─────────────────────────────┐
+│ OPENROUTER  openrouter.ai/api/v1                     │
+│ (Llama / Mistral / etc. via OPENAI_MODEL)            │
+└────────────────────────┬─────────────────────────────┘
+                         │ JSON back up the stack
+┌────────────────────────▼─────────────────────────────┐
+│ RESPONSE → { recommendation, winning_branch, mode,     │
+│              llm_call_count, error }                 │
+│ ResultsView renders markdown comparison + disclaimer │
+└──────────────────────────────────────────────────────┘</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 10 -->
+  <div class="slide" data-n="10">
     <h2>Safety &amp; Human Oversight</h2>
     <ul>
       <li><strong>Guardrails:</strong> citations required · no purchase APIs · LLM budget · separate Critic</li>
@@ -177,18 +321,14 @@ Citations: plan_b:1, plan_a:2</pre>
       <li><strong>Metrics:</strong> ≥95% grounding · ≥90% payout accuracy · 100% fallback on hard-gate failure</li>
     </ul>
     <pre>Input → Retrieval → ToT + Critic → Hard gates → Output OR Human handoff</pre>
-    <div class="speaker"><strong>Say (~45 sec):</strong> "Safety is built in at every layer. The agent is decision support with mandatory human review at defined thresholds."</div>
   </div>
 
-  <!-- SLIDE 10 -->
-  <div class="slide title-slide" data-n="10">
+  <!-- SLIDE 11 -->
+  <div class="slide title-slide" data-n="11">
     <h1>Thank You</h1>
     <p>Insurance Policy Comparison &amp; Recommendation Agent</p>
     <p class="github" style="color:#fff;margin-top:24px;">https://github.com/cottonandcolor/insurance-policy-agent</p>
     <p class="meta" style="margin-top:32px;">Questions?</p>
-    <div class="speaker" style="background:rgba(255,255,255,0.15);border-color:#fff;color:#fff;margin-top:32px;text-align:left;max-width:700px;">
-      <strong>Say (~30 sec):</strong> "This capstone integrates retrieval, multi-agent collaboration, Tree-of-Thought reasoning, and safety guardrails. Full code and docs are on GitHub. Thank you."
-    </div>
   </div>
 
 </div>

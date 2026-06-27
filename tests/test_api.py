@@ -80,6 +80,30 @@ def test_analyze_dry_run_defaults():
     assert data["winning_branch"]
     assert data["error"] is None
     assert data["llm_call_count"] >= 1
+    assert data["thread_id"]
+
+
+def test_follow_up_dry_run_after_analyze():
+    first = client.post(
+        "/api/analyze?dry_run=true&quick=true",
+        data={"use_defaults": "true"},
+    )
+    assert first.status_code == 200
+    thread_id = first.json()["thread_id"]
+    assert thread_id
+
+    second = client.post(
+        f"/api/follow-up?dry_run=true&quick=true",
+        data={
+            "thread_id": thread_id,
+            "message": "Prioritize lowest premium over coverage breadth.",
+        },
+    )
+    assert second.status_code == 200
+    data = second.json()
+    assert data["recommendation"]
+    assert data["thread_id"] == thread_id
+    assert data["error"] is None
 
 
 def test_analyze_dry_run_full_depth():

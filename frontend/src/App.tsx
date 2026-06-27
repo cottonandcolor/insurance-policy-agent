@@ -12,6 +12,7 @@ import { HealthBanner } from "./components/HealthBanner";
 import { PolicyUpload } from "./components/PolicyUpload";
 import { ProfileForm } from "./components/ProfileForm";
 import { ResultsView } from "./components/ResultsView";
+import { FollowUpForm } from "./components/FollowUpForm";
 
 const defaultProfile: ProfileInput = {
   age: 35,
@@ -171,6 +172,15 @@ export default function App() {
       {result && (
         <div ref={resultsRef} data-testid="results-section">
           <ResultsView result={result} />
+          {result.thread_id && (
+            <FollowUpForm
+              threadId={result.thread_id}
+              dryRun={dryRun}
+              quick={quick}
+              onResult={setResult}
+              onError={(msg) => setError(msg || null)}
+            />
+          )}
         </div>
       )}
     </div>
